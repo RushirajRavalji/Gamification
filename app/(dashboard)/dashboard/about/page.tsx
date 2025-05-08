@@ -37,22 +37,22 @@ export default function AboutPage() {
             <CardContent className="space-y-4">
               <p>
                 Solo Legend transforms your personal development journey into an immersive RPG experience. 
-                Complete real-life quests, develop character skills, earn rewards, and level up as you progress 
-                toward your goals.
+                Complete real-life quests, develop character skills, earn XP, and level up as you progress 
+                toward your fitness, health, and career goals.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <div className="bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-bold text-lg mb-2">Your Hero's Journey</h3>
-                  <p className="text-gray-300">Track your progress as you complete quests, overcome challenges, and evolve your character.</p>
+                  <p className="text-gray-300">Starting as a Novice (Level 1), evolve through custom class paths as you complete quests and develop your real-world abilities.</p>
                 </div>
                 <div className="bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-bold text-lg mb-2">Real Growth, Real Rewards</h3>
-                  <p className="text-gray-300">Every achievement in the real world is reflected in your character's development.</p>
+                  <p className="text-gray-300">Every achievement in the real world is reflected in your character's stats, XP, and inventory.</p>
                 </div>
                 <div className="bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-bold text-lg mb-2">Build Your Legend</h3>
-                  <p className="text-gray-300">Create a lasting record of your accomplishments and visualize your growth over time.</p>
+                  <p className="text-gray-300">Track your journey through the XP journal, visualize growth with streak counters, and watch your character evolve.</p>
                 </div>
               </div>
             </CardContent>
@@ -65,19 +65,22 @@ export default function AboutPage() {
             <CardContent className="space-y-4">
               <ol className="list-decimal pl-5 space-y-4">
                 <li>
-                  <strong>Create your character</strong> - Start by setting up your hero with a class that matches your goals and aspirations.
+                  <strong>Create your character</strong> - Choose a class that reflects your primary focus: Warrior (body), Shadow (focus), or Sage (mind).
                 </li>
                 <li>
-                  <strong>Accept quests</strong> - Choose from daily quests, side quests, dungeons (multi-stage challenges), and boss fights (major goals).
+                  <strong>Accept quests</strong> - Track daily habits, complete special tasks, and take on epic challenges through the quest system.
                 </li>
                 <li>
-                  <strong>Complete real-world tasks</strong> - Finish your real-life activities and mark them as complete in the app.
+                  <strong>Complete real-world tasks</strong> - Mark quests as complete when you finish the associated real-life activities.
                 </li>
                 <li>
-                  <strong>Earn XP and level up</strong> - Gain experience points, level up your character, and acquire new abilities.
+                  <strong>Earn XP and level up</strong> - Gain experience points, advance your character's level, and develop your six core attributes.
                 </li>
                 <li>
-                  <strong>Collect rewards</strong> - Unlock achievements, collect items, and enhance your character's stats.
+                  <strong>Build your streak</strong> - Maintain consistency with your daily quests to increase your streak counter and earn bonuses.
+                </li>
+                <li>
+                  <strong>Track your progress</strong> - Use the XP journal to reflect on your achievements and visualize your growth over time.
                 </li>
               </ol>
             </CardContent>
@@ -97,7 +100,8 @@ export default function AboutPage() {
                   <p className="text-gray-300 mb-3">Your central hub for tracking progress, viewing upcoming quests, and managing your adventure.</p>
                   <ul className="list-disc pl-5 text-sm text-gray-400">
                     <li>Overview of character stats and level</li>
-                    <li>Current streak and progress</li>
+                    <li>Current streak and XP progress</li>
+                    <li>Today's quests and active quests</li>
                     <li>Quick access to all game features</li>
                   </ul>
                 </div>
@@ -110,6 +114,7 @@ export default function AboutPage() {
                     <li>Side quests for one-time tasks</li>
                     <li>Dungeons for multi-step projects</li>
                     <li>Boss fights for major challenges</li>
+                    <li>Create custom quests for any goal</li>
                   </ul>
                 </div>
 
@@ -118,8 +123,9 @@ export default function AboutPage() {
                   <p className="text-gray-300 mb-3">View and manage your hero's stats, appearance, and background story.</p>
                   <ul className="list-disc pl-5 text-sm text-gray-400">
                     <li>Six core attributes that reflect your real-world skills</li>
-                    <li>Character customization options</li>
-                    <li>Progress history and achievements</li>
+                    <li>Character class selection</li>
+                    <li>Level progression and XP tracking</li>
+                    <li>Current streak and achievements</li>
                   </ul>
                 </div>
 
@@ -128,8 +134,9 @@ export default function AboutPage() {
                   <p className="text-gray-300 mb-3">Develop specialized abilities that enhance your real-world capabilities.</p>
                   <ul className="list-disc pl-5 text-sm text-gray-400">
                     <li>Unlock new skills as you level up</li>
-                    <li>Upgrade existing skills for greater bonuses</li>
-                    <li>Specialized paths for different aspects of life</li>
+                    <li>Choose from different skill branches</li>
+                    <li>Skills correspond to real-world abilities</li>
+                    <li>Passive and active skill bonuses</li>
                   </ul>
                 </div>
 
@@ -137,9 +144,10 @@ export default function AboutPage() {
                   <h3 className="font-bold text-xl mb-2">Inventory</h3>
                   <p className="text-gray-300 mb-3">Collect and manage items that represent your real-world tools and achievements.</p>
                   <ul className="list-disc pl-5 text-sm text-gray-400">
-                    <li>Gear that boosts your stats</li>
-                    <li>Badges and trophies from completed achievements</li>
-                    <li>Consumable items that provide temporary boosts</li>
+                    <li>Gear that provides stat bonuses</li>
+                    <li>Badges and trophies from achievements</li>
+                    <li>Items earned through quest completion</li>
+                    <li>Equipment slots for character customization</li>
                   </ul>
                 </div>
 
@@ -147,9 +155,10 @@ export default function AboutPage() {
                   <h3 className="font-bold text-xl mb-2">XP Journal</h3>
                   <p className="text-gray-300 mb-3">Track your journey and review your progress over time.</p>
                   <ul className="list-disc pl-5 text-sm text-gray-400">
-                    <li>Chronological history of all completed quests</li>
-                    <li>XP and stats gained over time</li>
-                    <li>Visualize your growth and development</li>
+                    <li>Chronological history of completed quests</li>
+                    <li>XP gained and milestones reached</li>
+                    <li>Reflection notes for personal insights</li>
+                    <li>Visual progress tracking</li>
                   </ul>
                 </div>
               </div>
@@ -197,6 +206,31 @@ export default function AboutPage() {
               </div>
 
               <div>
+                <h3 className="font-bold text-xl mb-3">Character Classes</h3>
+                <p className="mb-3">Your character class reflects your primary focus area and provides bonuses to certain stats:</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="border border-red-900/30 p-4 rounded-lg">
+                    <h4 className="font-bold text-red-400">Warrior</h4>
+                    <p className="text-sm text-gray-300 mb-2">Masters of physical development with a focus on strength and health.</p>
+                    <p className="text-xs text-gray-400">Primary stats: Strength, Willpower</p>
+                  </div>
+                  <div className="border border-purple-900/30 p-4 rounded-lg">
+                    <h4 className="font-bold text-purple-400">Shadow</h4>
+                    <p className="text-sm text-gray-300 mb-2">Specialists in focus and discipline who excel at deep work.</p>
+                    <p className="text-xs text-gray-400">Primary stats: Focus, Dexterity</p>
+                  </div>
+                  <div className="border border-blue-900/30 p-4 rounded-lg">
+                    <h4 className="font-bold text-blue-400">Sage</h4>
+                    <p className="text-sm text-gray-300 mb-2">Intellectuals who prioritize learning and knowledge acquisition.</p>
+                    <p className="text-xs text-gray-400">Primary stats: Intelligence, Influence</p>
+                  </div>
+                </div>
+                
+                <p className="mt-3 text-sm text-gray-400">As you level up, more advanced class options become available at level 15 and 40.</p>
+              </div>
+
+              <div>
                 <h3 className="font-bold text-xl mb-3">Experience Points (XP)</h3>
                 <p>You earn XP by completing quests:</p>
                 <ul className="list-disc pl-5 space-y-2 mt-2">
@@ -212,8 +246,9 @@ export default function AboutPage() {
                 <p className="mb-3">As you accumulate XP, you'll level up your character:</p>
                 <ul className="list-disc pl-5 space-y-2">
                   <li>Each level requires progressively more XP</li>
-                  <li>Leveling up awards skill points for the skill tree</li>
-                  <li>Milestone levels (5, 10, 15, etc.) unlock special achievements and features</li>
+                  <li>Leveling up increases your core stats</li>
+                  <li>Milestone levels unlock new class options and features</li>
+                  <li>Higher levels provide greater rewards and challenges</li>
                 </ul>
               </div>
 
@@ -222,8 +257,8 @@ export default function AboutPage() {
                 <p className="mb-3">Consistent daily activity builds your streak, which provides additional benefits:</p>
                 <ul className="list-disc pl-5 space-y-2">
                   <li>XP multipliers for maintaining streaks</li>
-                  <li>Special rewards at streak milestones (7 days, 30 days, 100 days, etc.)</li>
-                  <li>Streak protection items that can preserve your streak if you miss a day</li>
+                  <li>Special rewards at streak milestones</li>
+                  <li>Streak tracking to visualize your consistency</li>
                 </ul>
               </div>
             </CardContent>
@@ -246,25 +281,25 @@ export default function AboutPage() {
                     <h4 className="font-bold flex items-center gap-2">
                       <span className="text-xl">⚔️</span> Weapons & Armor
                     </h4>
-                    <p className="text-sm text-gray-300 mt-1">Represent your primary tools for tackling challenges. Provide significant stat boosts.</p>
+                    <p className="text-sm text-gray-300 mt-1">Equipment that provides stat bonuses to help you on your quests.</p>
                   </div>
                   <div className="border border-gray-700 p-4 rounded-lg">
                     <h4 className="font-bold flex items-center gap-2">
                       <span className="text-xl">📿</span> Accessories
                     </h4>
-                    <p className="text-sm text-gray-300 mt-1">Minor items that provide specialized bonuses for specific activities or stats.</p>
+                    <p className="text-sm text-gray-300 mt-1">Special items that provide focused benefits for specific activities.</p>
                   </div>
                   <div className="border border-gray-700 p-4 rounded-lg">
                     <h4 className="font-bold flex items-center gap-2">
                       <span className="text-xl">🧪</span> Consumables
                     </h4>
-                    <p className="text-sm text-gray-300 mt-1">One-time use items that provide temporary boosts or benefits.</p>
+                    <p className="text-sm text-gray-300 mt-1">One-time use items that can help with specific challenges.</p>
                   </div>
                   <div className="border border-gray-700 p-4 rounded-lg">
                     <h4 className="font-bold flex items-center gap-2">
                       <span className="text-xl">🏆</span> Achievements
                     </h4>
-                    <p className="text-sm text-gray-300 mt-1">Badges and trophies that commemorate significant accomplishments.</p>
+                    <p className="text-sm text-gray-300 mt-1">Special recognitions for reaching milestones in your journey.</p>
                   </div>
                 </div>
               </div>
@@ -303,7 +338,19 @@ export default function AboutPage() {
                   <li><strong>Quest Achievements</strong> - Completing certain numbers or types of quests</li>
                   <li><strong>Streak Achievements</strong> - Maintaining consistent daily activity</li>
                   <li><strong>Stat Achievements</strong> - Reaching specific stat thresholds</li>
-                  <li><strong>Special Achievements</strong> - Unique accomplishments and milestones</li>
+                  <li><strong>Level Achievements</strong> - Reaching important character level milestones</li>
+                  <li><strong>Collection Achievements</strong> - Acquiring sets of inventory items</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-xl mb-3">Visual Progression</h3>
+                <p className="mb-3">Track your growth visually through various indicators:</p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Stats Dashboard</strong> - See your current level, XP, and streak at a glance</li>
+                  <li><strong>Character Profile</strong> - View detailed information about your character's development</li>
+                  <li><strong>XP Journal</strong> - Review a chronological record of your accomplishments</li>
+                  <li><strong>Inventory Display</strong> - Browse your collection of earned items and achievements</li>
                 </ul>
               </div>
             </CardContent>
@@ -318,12 +365,12 @@ export default function AboutPage() {
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1">
-                  <AccordionTrigger>How is my progress evaluated?</AccordionTrigger>
+                  <AccordionTrigger>How is my progress tracked?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-gray-300">
-                      Progress is primarily self-reported - you mark quests as complete when you finish the associated real-world tasks. 
+                      Progress is self-reported - you mark quests as complete when you finish the associated real-world tasks. 
                       The system awards XP based on the quest type and difficulty. For daily habits, streak counters automatically 
-                      track your consistency. The platform is designed on a trust system, as the primary benefit is your own real-world growth.
+                      track your consistency. The platform uses a trust system, as the primary benefit is your own real-world growth.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -332,8 +379,8 @@ export default function AboutPage() {
                   <AccordionContent>
                     <p className="text-gray-300">
                       If you miss completing your daily quests, your streak counter will reset. However, this is just part of the 
-                      journey! You can always start building your streak again. As you progress, you may earn streak protection 
-                      items that can prevent a streak loss in certain circumstances.
+                      journey! You can always start building your streak again. The important thing is to get back on track and 
+                      continue making progress toward your goals.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -351,9 +398,9 @@ export default function AboutPage() {
                   <AccordionTrigger>How do I choose the right character class?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-gray-300">
-                      Your character class should align with your primary goals and focus areas. Classes provide small bonuses to 
-                      certain stats and may unlock unique skills, but they don't limit what you can accomplish. You can change 
-                      your class later as your goals evolve, so choose what resonates with your current development focus.
+                      Your character class should align with your primary goals and focus areas. The Warrior class focuses on physical development, 
+                      the Shadow class emphasizes focus and discipline, and the Sage class centers on intellectual growth. Choose the one that 
+                      best matches your current priorities, but don't worry - all classes can develop all stats.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -363,17 +410,17 @@ export default function AboutPage() {
                     <p className="text-gray-300">
                       Yes, your data privacy is a priority. Solo Legend uses Firebase authentication and secure database storage. 
                       Your personal information and quest details are visible only to you. We don't share your data with third parties,
-                      and you can request data deletion at any time from your account settings.
+                      and you maintain full control over your account information.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-6">
-                  <AccordionTrigger>Can I use Solo Legend with friends?</AccordionTrigger>
+                  <AccordionTrigger>How does the leveling system work?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-gray-300">
-                      While Solo Legend is primarily designed for individual journeys (hence the name), we plan to add optional 
-                      social features in the future. These will include the ability to share achievements with friends, join 
-                      guilds for mutual support, and participate in group challenges, all while maintaining your privacy preferences.
+                      You earn XP by completing quests, with more challenging quests providing greater rewards. As you accumulate XP, 
+                      you'll level up automatically. Each level requires progressively more XP, and reaching certain level milestones 
+                      (like level 15 and 40) unlocks new character class options and features.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
