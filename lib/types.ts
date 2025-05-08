@@ -21,6 +21,8 @@ export interface Character {
   inventory: InventoryItem[];
   questLog: Quest[];
   streakCount: number;
+  avatarId?: string;
+  lastActive: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +73,14 @@ export interface Quest {
   repeat?: QuestRepeat;
   createdAt: Date;
   updatedAt: Date;
+  category?: string;
+  progress?: number;
+  tasks?: QuestTask[];
+}
+
+export interface QuestTask {
+  title: string;
+  completed: boolean;
 }
 
 export type QuestType = 

@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { registerUser } from "@/lib/firebase/auth";
+import { db } from "@/lib/firebase/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -15,6 +19,7 @@ export default function RegisterPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -36,14 +41,50 @@ export default function RegisterPage() {
     
     setIsLoading(true);
     
-    // Firebase registration would go here
-    console.log("Registration with:", formData.email);
+    // Firebase registration
+    const result = await registerUser(formData.email, formData.password, formData.username);
     
-    // Simulate API delay
-    setTimeout(() => {
+    if (result.success && result.user) {
+      try {
+        // Initialize user data in Firestore
+        await setDoc(doc(db, "users", result.user.uid), {
+          username: formData.username,
+          email: formData.email,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        
+        // Initialize character data
+        await setDoc(doc(db, "characters", result.user.uid), {
+          userId: result.user.uid,
+          name: formData.username,
+          level: 1,
+          xp: 0,
+          xpToNextLevel: 100,
+          class: "Novice",
+          stats: {
+            strength: 5,
+            intelligence: 5,
+            focus: 5,
+            dexterity: 5,
+            willpower: 5,
+            influence: 5
+          },
+          streakCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        
+        router.push("/dashboard");
+      } catch (firestoreError) {
+        console.error("Error creating user document:", firestoreError);
+        setError("Registration successful but failed to set up your profile. Please try again.");
+        setIsLoading(false);
+      }
+    } else {
+      setError(result.error || "Registration failed. Please try again.");
       setIsLoading(false);
-      window.location.href = "/dashboard";
-    }, 1500);
+    }
   };
 
   return (

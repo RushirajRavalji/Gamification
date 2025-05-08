@@ -2,27 +2,33 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { loginUser } from "@/lib/firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     
-    // Firebase authentication would go here
-    console.log("Login attempt with:", email);
+    // Firebase authentication
+    const result = await loginUser(email, password);
     
-    // Simulate API delay
-    setTimeout(() => {
+    if (result.success) {
+      router.push("/dashboard");
+    } else {
+      setError(result.error || "Failed to login. Please try again.");
       setIsLoading(false);
-      window.location.href = "/dashboard";
-    }, 1500);
+    }
   };
 
   return (
@@ -64,6 +70,7 @@ export default function LoginPage() {
                 className="bg-gray-700 text-white border-gray-600"
               />
             </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button 
               type="submit" 
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
