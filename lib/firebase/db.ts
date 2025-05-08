@@ -84,6 +84,7 @@ export async function createInitialCharacter(name: string) {
     level: 1,
     xp: 0,
     xpToNextLevel: 100,
+    totalXpEarned: 0,
     class: 'Novice',
     stats: initialStats,
     skills: [],
@@ -148,6 +149,9 @@ export async function addXpToCharacter(xpAmount: number) {
   let newLevel = character.level;
   let newXpToNextLevel = character.xpToNextLevel;
   
+  // Update total lifetime XP earned
+  const totalXpEarned = (character.totalXpEarned || 0) + xpAmount;
+  
   // Level up logic
   while (newXp >= newXpToNextLevel) {
     newXp -= newXpToNextLevel;
@@ -160,10 +164,11 @@ export async function addXpToCharacter(xpAmount: number) {
     'xp': newXp,
     'level': newLevel,
     'xpToNextLevel': newXpToNextLevel,
+    'totalXpEarned': totalXpEarned,
     'updatedAt': serverTimestamp()
   });
   
-  return { newXp, newLevel, newXpToNextLevel };
+  return { newXp, newLevel, newXpToNextLevel, totalXpEarned };
 }
 
 export async function updateStreak(increasedBy: number = 1) {

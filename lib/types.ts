@@ -15,6 +15,7 @@ export interface Character {
   level: number;
   xp: number;
   xpToNextLevel: number;
+  totalXpEarned: number;
   class: CharacterClass;
   stats: CharacterStats;
   skills: Skill[];

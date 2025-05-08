@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,6 +172,27 @@ export default function CreateQuestPage() {
     { value: "influence", label: "Influence" }
   ];
   
+  // Define XP options
+  const xpOptions = [
+    { value: 10, label: "10 XP - Quick Task" },
+    { value: 20, label: "20 XP - Easy" },
+    { value: 30, label: "30 XP - Medium" },
+    { value: 40, label: "40 XP - Hard" },
+    { value: 50, label: "50 XP - Very Hard" },
+    { value: 100, label: "100 XP - Boss Challenge" }
+  ];
+  
+  // Update XP reward when quest type changes
+  useEffect(() => {
+    // Reset to 50 XP default unless it's a boss fight
+    if (formData.type === "BossFight") {
+      setFormData(prev => ({ ...prev, xpReward: 100 }));
+    } else if (formData.xpReward === 100) {
+      // If it was a boss fight and now it's not, reset to 50
+      setFormData(prev => ({ ...prev, xpReward: 50 }));
+    }
+  }, [formData.type]);
+  
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -267,17 +288,28 @@ export default function CreateQuestPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="xpReward">XP Reward</Label>
-                  <Input 
-                    id="xpReward"
-                    name="xpReward"
-                    type="number"
-                    value={formData.xpReward}
-                    onChange={handleChange}
-                    min={10}
-                    max={1000}
-                    required
-                    className="bg-gray-700 border-gray-600"
-                  />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {xpOptions.map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, xpReward: option.value }))}
+                        disabled={option.value === 100 && formData.type !== "BossFight"}
+                        className={`py-2 px-3 rounded-md text-sm transition-all ${
+                          formData.xpReward === option.value
+                            ? 'bg-purple-700 text-white'
+                            : option.value === 100 && formData.type !== "BossFight"
+                              ? 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                              : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {formData.type === "BossFight" && formData.xpReward !== 100 && (
+                    <p className="text-xs text-amber-400 mt-1">Boss Fights are recommended to use 100 XP</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">

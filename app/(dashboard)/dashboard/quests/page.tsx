@@ -112,16 +112,16 @@ export default function QuestsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-3xl font-bold">Quest Log</h1>
+        <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">Quest Log</h1>
         <div className="flex flex-col sm:flex-row gap-2">
           <Input 
             placeholder="Search quests..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-gray-700 border-gray-600 text-white"
+            className="bg-gray-700/70 border-gray-600/50 text-white focus:border-purple-500"
           />
           <Button 
-            className="bg-gradient-to-r from-purple-600 to-pink-600"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg shadow-purple-700/20"
             onClick={handleCreateQuest}
           >
             Create New Quest
@@ -130,27 +130,27 @@ export default function QuestsPage() {
       </div>
 
       <Tabs defaultValue="daily" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="daily">Daily Quests</TabsTrigger>
-          <TabsTrigger value="side">Side Quests</TabsTrigger>
-          <TabsTrigger value="dungeons">Dungeons</TabsTrigger>
-          <TabsTrigger value="boss">Boss Fights</TabsTrigger>
-        </TabsList>
+        <div className="mb-6 overflow-x-auto pb-2">
+          <TabsList className="w-full md:w-auto min-w-max bg-gray-800/40 p-1 border border-purple-900/20 rounded-lg">
+            <TabsTrigger value="daily" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Daily Quests</TabsTrigger>
+            <TabsTrigger value="side" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Side Quests</TabsTrigger>
+            <TabsTrigger value="dungeons" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Dungeons</TabsTrigger>
+            <TabsTrigger value="boss" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Boss Fights</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Daily Quests Tab */}
         <TabsContent value="daily">
           {dailyQuests.length === 0 ? (
-            <Card className="bg-gray-800 border-gray-700">
-              <CardContent className="pt-6">
-                <p className="text-center text-gray-400">No daily quests match your search.</p>
-              </CardContent>
-            </Card>
+            <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl p-6">
+              <p className="text-center text-gray-400">No daily quests match your search.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {dailyQuests.map((quest) => (
-                <Card key={quest.id} className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+                <div key={quest.id} className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-0">
                       <div className="flex items-start space-x-3 flex-1">
                         <input 
                           type="checkbox" 
@@ -164,17 +164,17 @@ export default function QuestsPage() {
                           </h3>
                           <p className="text-sm text-gray-400">{quest.description}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">
+                            <span className="text-xs px-2 py-0.5 bg-gray-700 rounded-full text-gray-300 border border-gray-600/50">
                               {quest.type}
-                            </Badge>
+                            </span>
                             {quest.category && (
-                              <Badge className={`text-xs ${
-                                quest.category === 'Body' ? 'bg-red-900 hover:bg-red-800' : 
-                                quest.category === 'Mind' ? 'bg-blue-900 hover:bg-blue-800' : 
-                                'bg-green-900 hover:bg-green-800'
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                quest.category === 'Body' ? 'bg-red-900/80 text-red-100' : 
+                                quest.category === 'Mind' ? 'bg-blue-900/80 text-blue-100' : 
+                                'bg-green-900/80 text-green-100'
                               }`}>
                                 {quest.category}
-                              </Badge>
+                              </span>
                             )}
                             <span className="text-xs text-gray-400">+{quest.xpReward} XP</span>
                             <span className="text-xs text-gray-400">
@@ -187,12 +187,13 @@ export default function QuestsPage() {
                         size="sm" 
                         variant={quest.status === "Completed" ? "outline" : "default"}
                         onClick={() => handleQuestStatusChange(quest.id, quest.status === "Completed" ? "InProgress" : "Completed")}
+                        className={`w-full sm:w-auto ${quest.status !== "Completed" ? 'bg-gradient-to-r from-purple-600 to-pink-600' : 'border-purple-500/30 hover:bg-purple-950/30'}`}
                       >
                         {quest.status === "Completed" ? "View" : "Complete"}
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -201,32 +202,30 @@ export default function QuestsPage() {
         {/* Side Quests Tab */}
         <TabsContent value="side">
           {sideQuests.length === 0 ? (
-            <Card className="bg-gray-800 border-gray-700">
-              <CardContent className="pt-6">
-                <p className="text-center text-gray-400">No side quests match your search.</p>
-              </CardContent>
-            </Card>
+            <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl p-6">
+              <p className="text-center text-gray-400">No side quests match your search.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {sideQuests.map((quest) => (
-                <Card key={quest.id} className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+                <div key={quest.id} className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-0">
                       <div className="space-y-1 flex-1">
                         <h3 className="font-medium text-white">{quest.title}</h3>
                         <p className="text-sm text-gray-400">{quest.description}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <Badge variant="secondary" className="text-xs bg-purple-900 text-purple-200">
+                          <span className="text-xs px-2 py-0.5 bg-purple-900/80 rounded-full text-purple-100">
                             {quest.type}
-                          </Badge>
+                          </span>
                           {quest.category && (
-                            <Badge className={`text-xs ${
-                              quest.category === 'Body' ? 'bg-red-900 hover:bg-red-800' : 
-                              quest.category === 'Mind' ? 'bg-blue-900 hover:bg-blue-800' : 
-                              'bg-green-900 hover:bg-green-800'
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              quest.category === 'Body' ? 'bg-red-900/80 text-red-100' : 
+                              quest.category === 'Mind' ? 'bg-blue-900/80 text-blue-100' : 
+                              'bg-green-900/80 text-green-100'
                             }`}>
                               {quest.category}
-                            </Badge>
+                            </span>
                           )}
                           <span className="text-xs text-gray-400">+{quest.xpReward} XP</span>
                           <span className="text-xs text-gray-400">
@@ -237,12 +236,13 @@ export default function QuestsPage() {
                       <Button 
                         size="sm"
                         onClick={() => handleQuestStatusChange(quest.id, "InProgress")}
+                        className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600"
                       >
                         Start
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}

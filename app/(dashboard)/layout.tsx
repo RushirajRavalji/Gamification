@@ -6,11 +6,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { useAuth, logoutUser } from "@/lib/firebase/auth";
+import { useAuth, logoutUser, getLocalAuthUser } from "@/lib/firebase/auth";
 import { useCharacter } from "@/lib/hooks/useCharacter";
 import CharacterAvatar from "@/app/components/CharacterAvatar";
 import AnimatedBackground from "@/app/components/AnimatedBackground";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({
   children,
@@ -28,7 +28,12 @@ export default function DashboardLayout({
   // Use useEffect for navigation instead of doing it during render
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/login");
+      // Check if we have user data in local storage as a fallback
+      const localUser = getLocalAuthUser();
+      if (!localUser) {
+        // No user in Firebase auth or local storage, redirect to login
+        router.push("/login");
+      }
     }
   }, [user, isLoading, router]);
   
@@ -119,7 +124,7 @@ export default function DashboardLayout({
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            <Link href="/" className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-500 hover:animate-pulse-slow transition-all">
+            <Link href="/dashboard" className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-500 hover:animate-pulse-slow transition-all">
               Solo Legend
             </Link>
           </motion.div>
@@ -160,7 +165,7 @@ export default function DashboardLayout({
               />
               
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">Streak: {character.streakCount} days</span>
+                <span className="text-xs text-gray-400">Total XP: {character.totalXpEarned || 0}</span>
                 <motion.span 
                   whileHover={{ scale: 1.1 }}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-1 rounded-full shadow-lg shadow-purple-900/30 animate-pulse-slow"
@@ -196,7 +201,7 @@ export default function DashboardLayout({
                   <span className="mr-2 text-lg">{item.icon}</span>
                   <span>{item.name}</span>
                   {pathname === item.path && (
-                    <span className="ml-2 flex h-2 w-2">
+                    <span className="ml-2 flex h-2 w-2 relative">
                       <span className="animate-ping absolute h-2 w-2 rounded-full bg-purple-400 opacity-75"></span>
                       <span className="relative rounded-full h-2 w-2 bg-purple-300"></span>
                     </span>
@@ -219,22 +224,22 @@ export default function DashboardLayout({
               className="w-full border-purple-500/30 hover:bg-purple-950/30 hover:text-purple-300 group transition-all rounded-lg"
               onClick={handleLogout}
             >
-              <span className="mr-2 group-hover:rotate-12 transition-transform duration-300">🏕️</span>
-              Return to Camp
+              <span className="mr-2 group-hover:rotate-12 transition-transform duration-300">🚪</span>
+              Log Out
             </Button>
           </motion.div>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-gray-800/90 backdrop-blur-sm border-b border-gray-700 z-10">
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-gray-900/95 backdrop-blur-lg border-b border-purple-900/30 z-50">
         <div className="flex items-center justify-between p-4">
-          <Link href="/" className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-500">
+          <Link href="/dashboard" className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-500">
             Solo Legend
           </Link>
           <motion.button 
             onClick={toggleMobileMenu} 
-            className="text-gray-300 hover:text-white"
+            className="text-gray-300 hover:text-white bg-gray-800/80 rounded-full p-1.5"
             whileTap={{ scale: 0.9 }}
           >
             {isMobileMenuOpen ? (
@@ -249,88 +254,143 @@ export default function DashboardLayout({
           </motion.button>
         </div>
         
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && character && (
-          <motion.div 
-            className="bg-gray-800/90 backdrop-blur-sm p-4 border-b border-gray-700 rounded-b-xl"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Character Info */}
-            <div className="flex items-center space-x-3 mb-3">
-              <CharacterAvatar 
-                avatarId={character.avatarId}
-                name={character.name}
-                className="h-10 w-10"
-              />
-              <div>
-                <h3 className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-pink-300">
-                  {character.name}
-                </h3>
-                <p className="text-xs text-gray-400">Lvl {character.level} {character.class}</p>
-              </div>
-              <span className="ml-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-1 rounded-full shadow-lg shadow-purple-900/30 animate-pulse-slow">
-                🔥 {character.streakCount}
-              </span>
-            </div>
-            
-            <div className="mb-1 flex justify-between text-xs">
-              <span>XP</span>
-              <span>{character.xp} / {character.xpToNextLevel}</span>
-            </div>
-            <Progress 
-              value={(character.xp / character.xpToNextLevel) * 100} 
-              className="h-2 mb-4 bg-gray-700"
-              indicatorClassName="bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse-slow"
-            />
-            
-            {/* Navigation */}
-            <ul className="space-y-1">
-              {navItems.map((item, index) => (
-                <motion.li 
-                  key={item.path}
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.1 * index, duration: 0.3 }}
-                >
-                  <Link 
-                    href={item.path} 
-                    className={`flex items-center px-3 py-2 rounded-lg transition-all ${pathname === item.path 
-                      ? 'bg-gradient-to-r from-purple-800 to-pink-900 text-white shadow-md shadow-purple-900/20' 
-                      : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <span className="mr-2 text-lg">{item.icon}</span>
-                    <span>{item.name}</span>
-                  </Link>
-                </motion.li>
-              ))}
-              <motion.li
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.1 * navItems.length, duration: 0.3 }}
+        {/* Mobile Menu with AnimatePresence */}
+        <AnimatePresence>
+          {isMobileMenuOpen && character && (
+            <motion.div 
+              className="absolute top-full left-0 right-0 bg-gradient-to-b from-gray-900 to-purple-900 backdrop-blur-lg p-4 pb-6 border-b border-purple-900/30 shadow-lg shadow-purple-900/20 z-50"
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              transition={{ 
+                duration: 0.3,
+                ease: "easeInOut" 
+              }}
+            >
+              {/* Character Info */}
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="flex items-center space-x-3 mb-4 bg-gray-800/40 p-3 rounded-lg border border-purple-900/20"
               >
-                <button 
-                  onClick={handleLogout}
-                  className="w-full text-left flex items-center px-3 py-2 rounded-lg transition text-gray-300 hover:bg-gray-700/50 hover:text-white"
-                >
-                  <span className="mr-2 text-lg">🏕️</span>
-                  Return to Camp
-                </button>
-              </motion.li>
-            </ul>
-          </motion.div>
-        )}
+                <CharacterAvatar 
+                  avatarId={character?.avatarId}
+                  name={character?.name || "Hero"}
+                  className="h-12 w-12"
+                />
+                <div>
+                  <h3 className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-pink-300">
+                    {character?.name || "Hero"}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-0.5 bg-purple-900/80 rounded-full text-white">Level {character?.level || 1}</span>
+                    <span className="text-xs text-gray-400">{character?.class || "Novice"}</span>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+                className="space-y-4 mb-4"
+              >
+                <div className="bg-gray-800/40 p-3 rounded-lg border border-purple-900/20">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-medium">⚡ XP Progress</span>
+                    <span className="text-sm">{character?.xp || 0} / {character?.xpToNextLevel || 100}</span>
+                  </div>
+                  <Progress 
+                    value={((character?.xp || 0) / (character?.xpToNextLevel || 100)) * 100} 
+                    className="h-2 bg-gray-700"
+                    indicatorClassName="bg-gradient-to-r from-purple-600 to-pink-600"
+                  />
+                </div>
+                
+                <div className="bg-gray-800/40 p-3 rounded-lg border border-purple-900/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">💫 Total XP Earned</span>
+                    <span className="text-sm">{character?.totalXpEarned || 0}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Lifetime XP accumulation
+                  </p>
+                </div>
+                
+                <div className="bg-gray-800/40 p-3 rounded-lg border border-purple-900/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">🔥 Current Streak</span>
+                    <span className="text-sm">{character?.streakCount || 0} Days</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {character?.streakCount ? "Keep it going!" : "Complete a daily quest to start a streak."}
+                  </p>
+                </div>
+              </motion.div>
+              
+              {/* Navigation */}
+              <motion.div
+                className="bg-gray-800/40 rounded-lg border border-purple-900/20 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.3 }}
+              >
+                <ul className="divide-y divide-purple-900/10">
+                  {navItems.map((item, index) => (
+                    <motion.li 
+                      key={item.path}
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.3 + (0.05 * index), duration: 0.3 }}
+                    >
+                      <Link 
+                        href={item.path} 
+                        className={`flex items-center px-4 py-3 transition-all ${pathname === item.path 
+                          ? 'bg-gradient-to-r from-purple-800/80 to-pink-900/80 text-white' 
+                          : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'}`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <span className="mr-3 text-lg">{item.icon}</span>
+                        <span>{item.name}</span>
+                      </Link>
+                    </motion.li>
+                  ))}
+                  <motion.li
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 + (0.05 * navItems.length), duration: 0.3 }}
+                  >
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full text-left flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700/30 hover:text-white transition-all"
+                    >
+                      <span className="mr-3 text-lg">🚪</span>
+                      Log Out
+                    </button>
+                  </motion.li>
+                </ul>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-0 md:pt-0 relative">
-        <div className="md:p-10 p-6 mt-16 md:mt-0 relative z-10">
+        <div className="md:p-10 p-4 pb-24 mt-16 md:mt-0 relative z-0 max-w-6xl mx-auto pointer-events-auto">
           {children}
         </div>
       </main>
+      
+      {/* Overlay for mobile menu */}
+      {isMobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-40 pointer-events-auto"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 } 

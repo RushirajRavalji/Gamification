@@ -1,19 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { loginUser } from "@/lib/firebase/auth";
+import { loginUser, getLocalAuthUser, useAuth } from "@/lib/firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState("");
   const router = useRouter();
+  const { user, loading: authLoading, initialized } = useAuth();
+
+  // Check for existing authentication when component mounts
+  useEffect(() => {
+    // If Firebase auth is initialized and user is authenticated, redirect to dashboard
+    if (initialized) {
+      if (user) {
+        console.log("User already authenticated, redirecting to dashboard");
+        router.push("/dashboard");
+      } else {
+        // If Firebase doesn't have the user, check localStorage as fallback
+        const localUser = getLocalAuthUser();
+        if (localUser) {
+          console.log("Found user in local storage, redirecting to dashboard");
+          router.push("/dashboard");
+        } else {
+          // No authentication found, show login form
+          setIsLoading(false);
+        }
+      }
+    }
+  }, [user, initialized, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +52,18 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (isLoading && initialized === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-900 to-black">
+        <div className="text-center">
+          <div className="inline-block animate-spin h-8 w-8 border-4 border-t-purple-500 border-r-transparent border-b-purple-500 border-l-transparent rounded-full mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-900 to-black p-4">

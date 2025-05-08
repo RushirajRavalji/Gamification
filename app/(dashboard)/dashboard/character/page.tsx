@@ -74,12 +74,14 @@ export default function CharacterPage() {
       </h1>
 
       <Tabs defaultValue="overview" className="w-full" onValueChange={setSelectedTab} value={selectedTab}>
-        <TabsList className="mb-6 w-full justify-center bg-gray-800/60 backdrop-blur-sm">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-purple-800">Overview</TabsTrigger>
-          <TabsTrigger value="stats" className="data-[state=active]:bg-purple-800">Stats & Skills</TabsTrigger>
-          <TabsTrigger value="equipment" className="data-[state=active]:bg-purple-800">Equipment</TabsTrigger>
-          <TabsTrigger value="achievements" className="data-[state=active]:bg-purple-800">Achievements</TabsTrigger>
-        </TabsList>
+        <div className="mb-6 overflow-x-auto pb-2">
+          <TabsList className="w-full md:w-auto min-w-max bg-gray-800/60 backdrop-blur-sm">
+            <TabsTrigger value="overview" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Overview</TabsTrigger>
+            <TabsTrigger value="stats" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Stats & Skills</TabsTrigger>
+            <TabsTrigger value="equipment" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Equipment</TabsTrigger>
+            <TabsTrigger value="achievements" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-800/80 data-[state=active]:to-pink-900/80 data-[state=active]:border-none">Achievements</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -127,6 +129,13 @@ export default function CharacterPage() {
                         className="h-2 bg-gray-700"
                         indicatorClassName="bg-gradient-to-r from-purple-600 to-pink-600"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Total XP Earned</span>
+                        <span>{character.totalXpEarned || 0}</span>
+                      </div>
+                      <div className="text-xs text-gray-400">Lifetime XP accumulation</div>
                     </div>
                   </div>
                 </div>

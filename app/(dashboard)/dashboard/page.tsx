@@ -173,7 +173,7 @@ export default function Dashboard() {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center justify-between"
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6"
       >
         <div className="flex items-center">
           {character && (
@@ -184,7 +184,7 @@ export default function Dashboard() {
             />
           )}
           <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+            <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
               Hero&apos;s Dashboard
             </h1>
             <p className="text-gray-400">Welcome back, {character?.name || "Hero"}!</p>
@@ -200,34 +200,30 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8 md:mb-10">
         <motion.div
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="h-full"
         >
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all h-full" 
-            hoverEffect="tilt"
-            glowColor="rgba(147, 51, 234, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all h-full p-5">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pb-3 pt-6 px-6">
-              <CardTitle className="text-lg flex items-center text-purple-300">
+            <div className="pb-3 pt-1">
+              <h3 className="text-lg flex items-center text-purple-300">
                 <span className="mr-3 animate-pulse-slow">⚡</span> Total XP
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
-              <p className="text-4xl font-bold">{calculatedXP !== null ? calculatedXP : character?.xp || 0}</p>
+              </h3>
+            </div>
+            <div>
+              <p className="text-4xl font-bold">{character?.totalXpEarned || 0}</p>
               <div className="flex items-center space-x-3 mt-2">
-                <Badge variant="secondary" className="bg-purple-800/80 backdrop-blur-sm px-3 py-1">
+                <span className="px-2 py-0.5 bg-purple-900/80 rounded-full text-white text-xs">
                   Level {character?.level || 1}
-                </Badge>
+                </span>
                 <p className="text-sm text-gray-400">{character?.class || "Novice"}</p>
               </div>
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
         </motion.div>
         
         <motion.div
@@ -236,25 +232,21 @@ export default function Dashboard() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="h-full"
         >
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all h-full" 
-            hoverEffect="tilt"
-            glowColor="rgba(219, 39, 119, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all h-full p-5">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pb-3 pt-6 px-6">
-              <CardTitle className="text-lg flex items-center text-purple-300">
+            <div className="pb-3 pt-1">
+              <h3 className="text-lg flex items-center text-purple-300">
                 <span className="mr-3 animate-pulse-slow">🏆</span> Quests Completed
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
+              </h3>
+            </div>
+            <div>
               <p className="text-4xl font-bold">{quests.filter(q => q.status === "Completed").length}</p>
               <p className="text-sm text-gray-400 mt-2">
                 Daily: {dailyQuests.filter(q => q.status === "Completed").length} | 
                 Boss: {quests.filter(q => q.status === "Completed" && q.type === "BossFight").length}
               </p>
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
         </motion.div>
         
         <motion.div
@@ -263,46 +255,38 @@ export default function Dashboard() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="h-full"
         >
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all h-full" 
-            hoverEffect="tilt"
-            glowColor="rgba(236, 72, 153, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all h-full p-5">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pb-3 pt-6 px-6">
-              <CardTitle className="text-lg flex items-center text-purple-300">
+            <div className="pb-3 pt-1">
+              <h3 className="text-lg flex items-center text-purple-300">
                 <span className="mr-3 animate-pulse-slow">🔥</span> Current Streak
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
+              </h3>
+            </div>
+            <div>
               <p className="text-4xl font-bold">{character?.streakCount || 0} Days</p>
               <p className="text-sm text-gray-400 mt-2">{streakMessage || "Complete daily quests to maintain your streak!"}</p>
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Daily Quests */}
         <motion.div 
-          className="md:col-span-2 space-y-8"
+          className="md:col-span-2 space-y-4 sm:space-y-6 md:space-y-8"
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all" 
-            hoverEffect="glow"
-            glowColor="rgba(139, 92, 246, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pt-6 pb-3 px-6">
-              <CardTitle className="flex items-center text-purple-300">
+            <div className="pt-5 pb-3 px-5">
+              <h3 className="flex items-center text-xl text-purple-300">
                 <span className="mr-3 animate-pulse-slow">📝</span> Today&apos;s Quests
-              </CardTitle>
-              <CardDescription>Complete your daily challenges to maintain your streak</CardDescription>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
+              </h3>
+              <p className="text-sm text-gray-400">Complete your daily challenges to maintain your streak</p>
+            </div>
+            <div className="px-5 pb-5">
               {dailyQuests.length === 0 ? (
                 <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
                   <motion.div
@@ -362,22 +346,18 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
 
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all" 
-            hoverEffect="glow"
-            glowColor="rgba(139, 92, 246, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pt-6 pb-3 px-6">
-              <CardTitle className="flex items-center text-purple-300">
+            <div className="pt-5 pb-3 px-5">
+              <h3 className="flex items-center text-xl text-purple-300">
                 <span className="mr-3 animate-pulse-slow">⚔️</span> Active Quests
-              </CardTitle>
-              <CardDescription>Your ongoing adventures</CardDescription>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
+              </h3>
+              <p className="text-sm text-gray-400">Your ongoing adventures</p>
+            </div>
+            <div className="px-5 pb-5">
               {activeQuests.length === 0 ? (
                 <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
                   <motion.div
@@ -435,29 +415,25 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
         </motion.div>
 
         {/* Character Stats & Recent Activity */}
         <motion.div 
-          className="space-y-8"
+          className="space-y-4 sm:space-y-6 md:space-y-8"
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all" 
-            hoverEffect="glow"
-            glowColor="rgba(139, 92, 246, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pt-6 pb-3 px-6">
-              <CardTitle className="flex items-center text-purple-300">
+            <div className="pt-5 pb-3 px-5">
+              <h3 className="flex items-center text-xl text-purple-300">
                 <span className="mr-3 animate-pulse-slow">📊</span> Character Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
+              </h3>
+            </div>
+            <div className="px-5 pb-5">
               <div className="h-[200px] mb-5">
                 {character && (
                   <div className="h-full">
@@ -509,21 +485,17 @@ export default function Dashboard() {
                   </Button>
                 </motion.div>
               </div>
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
 
-          <AnimatedCard 
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all" 
-            hoverEffect="tilt"
-            glowColor="rgba(139, 92, 246, 0.6)"
-          >
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden relative group hover:shadow-lg hover:shadow-purple-700/10 transition-all">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(120,40,200,0.15),transparent_70%)] pointer-events-none"></div>
-            <CardHeader className="pt-6 pb-3 px-6">
-              <CardTitle className="flex items-center text-purple-300">
+            <div className="pt-5 pb-3 px-5">
+              <h3 className="flex items-center text-xl text-purple-300">
                 <span className="mr-3 animate-pulse-slow">🎯</span> Recent Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
+              </h3>
+            </div>
+            <div className="px-5 pb-5">
               {recentAchievements.length === 0 ? (
                 <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
                   <p>Complete quests to earn achievements!</p>
@@ -561,8 +533,8 @@ export default function Dashboard() {
                   </motion.div>
                 </div>
               )}
-            </CardContent>
-          </AnimatedCard>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>

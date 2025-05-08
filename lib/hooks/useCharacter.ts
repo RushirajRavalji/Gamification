@@ -95,7 +95,8 @@ export function useCharacter() {
           ...prev,
           xp: result.newXp,
           level: result.newLevel,
-          xpToNextLevel: result.newXpToNextLevel
+          xpToNextLevel: result.newXpToNextLevel,
+          totalXpEarned: result.totalXpEarned
         };
       });
       

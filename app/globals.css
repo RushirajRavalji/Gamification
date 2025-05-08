@@ -84,6 +84,13 @@
   50% { transform: scale(1.1); }
 }
 
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
 /* Utility classes for animations */
 .animate-float {
   animation: float 3s ease-in-out infinite;
@@ -111,6 +118,38 @@
   animation: bounce 2s ease-in-out infinite;
 }
 
+.animate-ping {
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+/* Fix pointer events for all animations */
+.animate-float,
+.animate-pulse-slow,
+.animate-glow,
+.animate-shine,
+.animate-rotate,
+.animate-bounce-slow,
+.animate-ping {
+  pointer-events: none;
+}
+
+/* Allow pointer events for interactive elements with animations */
+button .animate-float,
+button .animate-pulse-slow,
+button .animate-glow,
+button .animate-shine,
+button .animate-rotate,
+button .animate-bounce-slow,
+a .animate-float,
+a .animate-pulse-slow,
+a .animate-glow,
+a .animate-shine,
+a .animate-rotate,
+a .animate-bounce-slow {
+  pointer-events: auto;
+}
+
 /* Star particles for achievements */
 @keyframes twinkle {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -127,6 +166,7 @@
   background-color: white;
   box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
   animation: twinkle 2s infinite;
+  pointer-events: none;
 }
 
 .star-particles::before {
@@ -175,6 +215,7 @@
   background: radial-gradient(circle, rgba(147, 51, 234, 0.8) 0%, transparent 70%);
   opacity: 0;
   animation: pulse 1s ease-out forwards;
+  pointer-events: none;
 }
 
 @theme inline {

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { registerUser } from "@/lib/firebase/auth";
+import { registerUser, getLocalAuthUser, useAuth } from "@/lib/firebase/auth";
 import { db } from "@/lib/firebase/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -17,9 +17,31 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: ""
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState("");
   const router = useRouter();
+  const { user, loading: authLoading, initialized } = useAuth();
+
+  // Check for existing authentication when component mounts
+  useEffect(() => {
+    // If Firebase auth is initialized and user is authenticated, redirect to dashboard
+    if (initialized) {
+      if (user) {
+        console.log("User already authenticated, redirecting to dashboard");
+        router.push("/dashboard");
+      } else {
+        // If Firebase doesn't have the user, check localStorage as fallback
+        const localUser = getLocalAuthUser();
+        if (localUser) {
+          console.log("Found user in local storage, redirecting to dashboard");
+          router.push("/dashboard");
+        } else {
+          // No authentication found, show registration form
+          setIsLoading(false);
+        }
+      }
+    }
+  }, [user, initialized, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -61,6 +83,7 @@ export default function RegisterPage() {
           level: 1,
           xp: 0,
           xpToNextLevel: 100,
+          totalXpEarned: 0,
           class: "Novice",
           stats: {
             strength: 5,
@@ -86,6 +109,18 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (isLoading && initialized === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-900 to-black">
+        <div className="text-center">
+          <div className="inline-block animate-spin h-8 w-8 border-4 border-t-purple-500 border-r-transparent border-b-purple-500 border-l-transparent rounded-full mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-900 to-black p-4">

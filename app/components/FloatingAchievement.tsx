@@ -56,6 +56,7 @@ export default function FloatingAchievement({
             scale: 0.5,
             transition: { duration: 0.2 } 
           }}
+          style={{ pointerEvents: 'none' }}
         >
           <div className="bg-gradient-to-r from-purple-900/90 to-pink-900/90 backdrop-blur-md p-6 rounded-xl shadow-2xl border border-purple-500/30 overflow-hidden relative">
             <div className="absolute inset-0 overflow-hidden">

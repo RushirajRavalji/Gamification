@@ -147,12 +147,12 @@ export default function JournalPage() {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <h1 className="text-3xl font-bold">XP Journal</h1>
         <Button>Export Log</Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         <div className="md:col-span-2">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
@@ -166,17 +166,17 @@ export default function JournalPage() {
                   <p className="mt-2">Complete quests to start building your journal!</p>
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-6 sm:space-y-8">
                   {Object.entries(groupedEntries).map(([month, entries]) => (
                     <div key={month}>
-                      <h3 className="text-lg font-medium mb-4 pb-2 border-b border-gray-700">{month}</h3>
-                      <div className="space-y-6">
+                      <h3 className="text-lg font-medium mb-3 sm:mb-4 pb-2 border-b border-gray-700">{month}</h3>
+                      <div className="space-y-4 sm:space-y-6">
                         {entries.map((entry) => (
-                          <div key={entry.id} className="relative pl-6 pb-6 border-l border-gray-700">
+                          <div key={entry.id} className="relative pl-4 sm:pl-6 pb-4 sm:pb-6 border-l border-gray-700">
                             {/* Timeline dot */}
                             <div className="absolute left-0 top-0 w-3 h-3 -translate-x-1.5 rounded-full bg-purple-500"></div>
                             
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 sm:gap-4">
                               <div className="space-y-2">
                                 <div className="flex flex-col md:flex-row md:items-center gap-2">
                                   <h4 className="text-base font-medium">{entry.title}</h4>
@@ -216,7 +216,7 @@ export default function JournalPage() {
               <CardTitle>XP Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {character && (
                   <div>
                     <h3 className="text-lg font-medium mb-2">Level Progress</h3>
@@ -233,13 +233,13 @@ export default function JournalPage() {
                 
                 <div>
                   <h3 className="text-lg font-medium mb-2">Total XP Earned</h3>
-                  <p className="text-3xl font-bold text-purple-400">{totalXP} XP</p>
+                  <p className="text-3xl font-bold text-purple-400">{character?.totalXpEarned || 0} XP</p>
                   <p className="text-sm text-gray-400 mt-1">Lifetime accumulation</p>
                 </div>
                 
                 <div>
                   <h3 className="text-lg font-medium mb-2">Stats Improved</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     {Object.entries(totalStats).map(([stat, value]) => (
                       <div key={stat} className="flex justify-between items-center">
                         <span className="capitalize">{stat}</span>

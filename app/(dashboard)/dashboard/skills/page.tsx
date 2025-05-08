@@ -359,9 +359,8 @@ export default function SkillTreePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <h1 className="text-3xl font-bold">Skill Tree</h1>
-        <Button variant="outline" onClick={resetSkills} disabled={isUpdating}>Reset Skills</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
