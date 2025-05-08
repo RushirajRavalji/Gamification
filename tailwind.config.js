@@ -65,6 +65,10 @@ module.exports = {
         "spin-slow": "spin 3s linear infinite",
         "float": "float 6s ease-in-out infinite",
         "shine": "shine 8s ease-in-out infinite",
+        "cursor-pulse": "cursor-pulse 2s ease-in-out infinite",
+        "cursor-glow": "cursor-glow 3s ease-in-out infinite",
+        "cursor-spin": "cursor-spin 10s linear infinite",
+        "trail-fade": "trail-fade 0.5s forwards",
       },
       keyframes: {
         "accordion-down": {
@@ -88,6 +92,22 @@ module.exports = {
             transform: 'scale(2)',
             opacity: '0',
           },
+        },
+        "cursor-pulse": {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
+          '50%': { transform: 'scale(1.1)', opacity: '1' },
+        },
+        "cursor-glow": {
+          '0%, 100%': { filter: 'blur(5px)' },
+          '50%': { filter: 'blur(8px)' },
+        },
+        "cursor-spin": {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' },
+        },
+        "trail-fade": {
+          '0%': { opacity: '0.6', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.5)' },
         },
       },
     },

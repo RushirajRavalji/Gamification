@@ -10,6 +10,7 @@ import { useAuth, logoutUser, getLocalAuthUser } from "@/lib/firebase/auth";
 import { useCharacter } from "@/lib/hooks/useCharacter";
 import CharacterAvatar from "@/app/components/CharacterAvatar";
 import AnimatedBackground from "@/app/components/AnimatedBackground";
+import GlowingCursor from "@/app/components/GlowingCursor";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({
@@ -111,7 +112,16 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex h-screen bg-gray-900 text-white relative overflow-hidden">
+      <GlowingCursor 
+        size={35} 
+        opacity={0.5} 
+        color="rgba(147, 51, 234, 0.6)" 
+        showTrail={true} 
+        trailLength={5}
+        pulseEffect={true}
+        throttleMs={20} 
+      />
       {/* Animated background */}
       <AnimatedBackground />
       

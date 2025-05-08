@@ -91,6 +91,27 @@
   }
 }
 
+/* New cursor animation keyframes */
+@keyframes cursor-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes cursor-glow {
+  0%, 100% { filter: blur(5px); }
+  50% { filter: blur(8px); }
+}
+
+@keyframes cursor-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes trail-fade {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.5); }
+}
+
 /* Utility classes for animations */
 .animate-float {
   animation: float 3s ease-in-out infinite;
@@ -123,6 +144,23 @@
   pointer-events: none;
 }
 
+/* New cursor animation classes */
+.animate-cursor-pulse {
+  animation: cursor-pulse 2s ease-in-out infinite;
+}
+
+.animate-cursor-glow {
+  animation: cursor-glow 3s ease-in-out infinite;
+}
+
+.animate-cursor-spin {
+  animation: cursor-spin 10s linear infinite;
+}
+
+.animate-trail-fade {
+  animation: trail-fade 0.5s forwards;
+}
+
 /* Fix pointer events for all animations */
 .animate-float,
 .animate-pulse-slow,
@@ -130,7 +168,11 @@
 .animate-shine,
 .animate-rotate,
 .animate-bounce-slow,
-.animate-ping {
+.animate-ping,
+.animate-cursor-pulse,
+.animate-cursor-glow,
+.animate-cursor-spin,
+.animate-trail-fade {
   pointer-events: none;
 }
 
