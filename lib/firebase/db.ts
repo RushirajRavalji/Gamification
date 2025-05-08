@@ -33,7 +33,9 @@ export async function getCharacter() {
   const characterDocs = await getDocs(characterRef);
   
   if (characterDocs.empty) {
-    return null;
+    // Create a default character if none exists
+    console.log('No character found, creating initial character');
+    return createInitialCharacter('Hero');
   }
   
   const characterData = characterDocs.docs[0].data();
@@ -50,6 +52,21 @@ export async function createInitialCharacter(name: string) {
   
   if (!user) {
     throw new Error('No authenticated user');
+  }
+  
+  // Check if character already exists
+  const characterRef = collection(db, 'users', user.uid, 'character');
+  const characterDocs = await getDocs(characterRef);
+  
+  // If character exists, return it
+  if (!characterDocs.empty) {
+    const characterData = characterDocs.docs[0].data();
+    return {
+      id: characterDocs.docs[0].id,
+      ...characterData,
+      createdAt: characterData.createdAt?.toDate(),
+      updatedAt: characterData.updatedAt?.toDate()
+    } as Character;
   }
   
   const initialStats: CharacterStats = {
@@ -78,7 +95,6 @@ export async function createInitialCharacter(name: string) {
     updatedAt: new Date()
   };
   
-  const characterRef = collection(db, 'users', user.uid, 'character');
   const docRef = await addDoc(characterRef, {
     ...newCharacter,
     lastActive: serverTimestamp(),
@@ -405,4 +421,75 @@ export async function hasDailyQuestCompletionForDate(date: Date) {
   const questsSnapshot = await getDocs(questsQuery);
   
   return !questsSnapshot.empty;
+}
+
+// New function to calculate and update total XP
+export async function calculateAndUpdateTotalXP() {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+  
+  // Get the character
+  const character = await getCharacter();
+  
+  if (!character) {
+    throw new Error('Character not found');
+  }
+  
+  // If character already has XP, just return it, don't recalculate
+  if (character.xp > 0 || character.level > 1) {
+    return character.xp;
+  }
+  
+  // Get all completed quests
+  const questsRef = collection(db, 'users', user.uid, 'quests');
+  const questsQuery = query(questsRef, where('status', '==', 'Completed'));
+  const questsSnapshot = await getDocs(questsQuery);
+  
+  // Calculate total XP
+  let totalXP = 0;
+  questsSnapshot.forEach(doc => {
+    const questData = doc.data();
+    totalXP += questData.xpReward || 0;
+  });
+  
+  // Only update if we found XP and the character's XP is still 0
+  // This prevents unnecessary updates that could cause infinite loops
+  if (totalXP > 0 && character.xp === 0) {
+    const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
+    
+    // First update to set initial XP value
+    await updateDoc(characterDocRef, {
+      'xp': totalXP,
+      'updatedAt': serverTimestamp()
+    });
+    
+    // Calculate level based on XP
+    let newLevel = 1;
+    let xpRequired = 100; // XP required for level 2
+    let remainingXP = totalXP;
+    
+    while (remainingXP >= xpRequired) {
+      remainingXP -= xpRequired;
+      newLevel++;
+      xpRequired = Math.floor(xpRequired * 1.1); // Each level requires 10% more XP
+    }
+    
+    // Only update again if level changed, to minimize Firestore writes
+    if (newLevel > 1) {
+      // Update level and XP to next level in a single operation
+      await updateDoc(characterDocRef, {
+        'level': newLevel,
+        'xp': remainingXP,
+        'xpToNextLevel': xpRequired,
+        'updatedAt': serverTimestamp()
+      });
+    }
+    
+    return remainingXP; // Return current XP
+  }
+  
+  return character.xp; // Return existing XP, even if it's 0
 } 

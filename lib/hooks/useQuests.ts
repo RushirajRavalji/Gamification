@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../firebase/auth';
 import { getQuests, updateQuestStatus } from '../firebase/db';
 import { Quest, QuestStatus } from '../types';
@@ -8,26 +8,37 @@ export function useQuests() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    // Only fetch data when we have a logged in user
-    if (!loading && user) {
+    // Only fetch data when we have a logged in user and haven't fetched yet
+    if (!loading && user && !hasFetched && !isFetchingRef.current) {
       fetchQuests();
+    } else if (!user) {
+      setQuests([]);
+      setIsLoading(false);
+      setHasFetched(false);
     }
-  }, [user, loading]);
+  }, [user, loading, hasFetched]);
 
   const fetchQuests = async () => {
+    if (isFetchingRef.current) return;
+    
     try {
+      isFetchingRef.current = true;
       setIsLoading(true);
       setError(null);
       
       const questsData = await getQuests();
       setQuests(questsData);
+      setHasFetched(true);
     } catch (err) {
       console.error("Error fetching quests:", err);
       setError("Failed to load quests data");
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   };
 

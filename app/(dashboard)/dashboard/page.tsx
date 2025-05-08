@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,7 +13,7 @@ import { collection, getDocs, query, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/firebase";
 import { useCharacter } from "@/lib/hooks/useCharacter";
 import { useQuests } from "@/lib/hooks/useQuests";
-import { checkAndUpdateStreak } from "@/lib/firebase/db";
+import { checkAndUpdateStreak, calculateAndUpdateTotalXP } from "@/lib/firebase/db";
 // Temporarily comment out until the package is properly installed
 // import { toast } from "react-hot-toast";
 import CharacterRadarChart from "@/app/components/CharacterRadarChart";
@@ -24,31 +24,18 @@ import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
-  const { character, isLoading: characterLoading } = useCharacter();
+  const { character, isLoading: characterLoading, fetchCharacter } = useCharacter();
   const { quests, isLoading: questsLoading, updateQuest, getQuestsByType } = useQuests();
   const [recentAchievements, setRecentAchievements] = useState<XpJournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [streakMessage, setStreakMessage] = useState<string>('');
   const [showAchievement, setShowAchievement] = useState<{id: string, title: string, xp: number} | null>(null);
+  const [calculatedXP, setCalculatedXP] = useState<number | null>(null);
+  const hasRunInitialCheckRef = useRef(false);
 
   // Get daily and active quests
   const dailyQuests = getQuestsByType("Daily");
   const activeQuests = [...getQuestsByType("Dungeon"), ...getQuestsByType("BossFight")].filter(q => q.status === "InProgress");
-
-  useEffect(() => {
-    // Only fetch data when we have a logged in user
-    if (!authLoading && user) {
-      fetchAchievements();
-      // Check and update streak on dashboard load
-      checkAndUpdateStreak().then(result => {
-        if (result && result.message) {
-          setStreakMessage(result.message);
-        }
-      }).catch(error => {
-        console.error("Error updating streak:", error);
-      });
-    }
-  }, [user, authLoading]);
 
   // Track when all data is loaded
   useEffect(() => {
@@ -58,6 +45,39 @@ export default function Dashboard() {
       setIsLoading(true);
     }
   }, [authLoading, characterLoading, questsLoading]);
+
+  // Handle initial data check - streak and XP calculation
+  useEffect(() => {
+    // Only run once after initial data is loaded and when we have a user
+    if (!isLoading && user && !hasRunInitialCheckRef.current) {
+      hasRunInitialCheckRef.current = true;
+      
+      // Check and update streak
+      checkAndUpdateStreak().then(result => {
+        if (result && result.message) {
+          setStreakMessage(result.message);
+        }
+      }).catch(error => {
+        console.error("Error updating streak:", error);
+      });
+      
+      // Check and update total XP if character has 0 XP
+      if (character && character.xp === 0) {
+        calculateAndUpdateTotalXP().then(xp => {
+          setCalculatedXP(xp);
+          // Refresh character data if XP was updated
+          if (xp > 0) {
+            fetchCharacter();
+          }
+        }).catch(error => {
+          console.error("Error calculating total XP:", error);
+        });
+      }
+      
+      // Fetch achievements only once at the beginning
+      fetchAchievements();
+    }
+  }, [isLoading, user, character, fetchCharacter]);
 
   const fetchAchievements = async () => {
     try {
@@ -199,7 +219,7 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-6 pb-6">
-              <p className="text-4xl font-bold">{character?.xp || 0}</p>
+              <p className="text-4xl font-bold">{calculatedXP !== null ? calculatedXP : character?.xp || 0}</p>
               <div className="flex items-center space-x-3 mt-2">
                 <Badge variant="secondary" className="bg-purple-800/80 backdrop-blur-sm px-3 py-1">
                   Level {character?.level || 1}

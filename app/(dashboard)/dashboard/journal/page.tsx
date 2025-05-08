@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,20 +22,24 @@ export default function JournalPage() {
   const { character, isLoading: characterLoading } = useCharacter();
   const [journalEntries, setJournalEntries] = useState<FormattedJournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
+  const isDataFetchingRef = useRef(false);
   
-  // Fetch journal entries
+  // Fetch journal entries - only once when component mounts
   useEffect(() => {
     const fetchEntries = async () => {
-      if (!user) return;
+      if (!user || hasFetched || isDataFetchingRef.current) return;
       
       try {
+        isDataFetchingRef.current = true;
         setIsLoading(true);
         
         // Get entries from Firestore, ordered by timestamp descending
-        const entriesRef = collection(db, 'users', user.uid, 'journal');
+        const entriesRef = collection(db, 'users', user.uid, 'xpJournal');
         const entriesQuery = query(entriesRef, orderBy('timestamp', 'desc'));
         const entriesSnapshot = await getDocs(entriesQuery);
         
+        // Process the entries and set state only once
         const entriesData = entriesSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -46,20 +50,23 @@ export default function JournalPage() {
         });
         
         setJournalEntries(entriesData);
+        setHasFetched(true);
       } catch (error) {
         console.error("Error fetching journal entries:", error);
       } finally {
         setIsLoading(false);
+        isDataFetchingRef.current = false;
       }
     };
     
-    if (user && !authLoading) {
+    // Only run if authenticated and we haven't fetched yet
+    if (user && !authLoading && !hasFetched && !isDataFetchingRef.current) {
       fetchEntries();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, hasFetched]);
   
-  // Group entries by month
-  const groupEntriesByMonth = () => {
+  // Group entries by month - optimize with useMemo
+  const groupedEntries = useMemo(() => {
     const grouped: {[key: string]: FormattedJournalEntry[]} = {};
     
     journalEntries.forEach(entry => {
@@ -71,15 +78,15 @@ export default function JournalPage() {
     });
     
     return grouped;
-  };
+  }, [journalEntries]);
   
-  const groupedEntries = groupEntriesByMonth();
+  // Calculate stats - optimize with useMemo
+  const totalXP = useMemo(() => {
+    return journalEntries.reduce((sum, entry) => sum + entry.xpGained, 0);
+  }, [journalEntries]);
   
-  // Calculate stats
-  const totalXP = journalEntries.reduce((sum, entry) => sum + entry.xpGained, 0);
-  
-  // Calculate total stats gained
-  const calculateTotalStats = () => {
+  // Calculate total stats gained - optimize with useMemo
+  const totalStats = useMemo(() => {
     const totals: {[key: string]: number} = {};
     
     journalEntries.forEach(entry => {
@@ -94,9 +101,7 @@ export default function JournalPage() {
     });
     
     return totals;
-  };
-  
-  const totalStats = calculateTotalStats();
+  }, [journalEntries]);
   
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', { 

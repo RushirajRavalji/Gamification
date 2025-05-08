@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
 import { getCharacter, updateCharacterStats, addXpToCharacter, createInitialCharacter } from '@/lib/firebase/db';
 import { Character, CharacterStats } from '@/lib/types';
@@ -8,32 +8,48 @@ export function useCharacter() {
   const [character, setCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+  const isFetchingRef = useRef(false);
 
-  const fetchCharacter = async () => {
+  // Use useCallback to memoize the fetchCharacter function
+  const fetchCharacter = useCallback(async () => {
+    // Skip if already fetching
+    if (isFetchingRef.current) return;
+    
+    isFetchingRef.current = true;
     setIsLoading(true);
     setError(null);
     
     try {
       if (user) {
         const characterData = await getCharacter();
-        setCharacter(characterData);
+        setCharacter(prev => {
+          // Only update if the data is different or null
+          if (!prev || JSON.stringify(prev) !== JSON.stringify(characterData)) {
+            return characterData;
+          }
+          return prev;
+        });
+        setHasFetched(true);
       }
     } catch (err) {
       console.error("Error fetching character:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchCharacter();
-    } else {
-      setCharacter(null);
-      setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && !hasFetched && !isFetchingRef.current) {
+      fetchCharacter();
+    } else if (!user) {
+      setCharacter(null);
+      setIsLoading(false);
+      setHasFetched(false);
+    }
+  }, [user, fetchCharacter, hasFetched]);
 
   const updateStats = async (newStats: Partial<CharacterStats>) => {
     try {
