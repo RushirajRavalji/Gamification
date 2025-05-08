@@ -210,9 +210,10 @@ export default function CharacterPage() {
                       {stat === 'strength' && 'Physical power and endurance'}
                       {stat === 'intelligence' && 'Learning capacity and problem solving'}
                       {stat === 'focus' && 'Concentration and attention to detail'}
-                      {stat === 'dexterity' && 'Coordination and reflexes'}
+                      {stat === 'consistency' && 'Regular practice and habit formation'}
                       {stat === 'willpower' && 'Mental fortitude and discipline'}
                       {stat === 'influence' && 'Social impact and leadership'}
+                      {stat === 'relationships' && 'Interpersonal connections and networking'}
                     </p>
                   </div>
                 ))}

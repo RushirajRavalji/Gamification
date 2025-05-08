@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={inter.className}>
         <FirebaseProvider>
-          {children}
+        {children}
         </FirebaseProvider>
         {/* Temporarily comment out until the package is properly installed */}
         {/* <Toaster position="bottom-right" /> */}

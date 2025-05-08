@@ -42,9 +42,10 @@ export interface CharacterStats {
   strength: number; // Physical capabilities
   intelligence: number; // Learning capacity
   focus: number; // Attention span
-  dexterity: number; // Physical coordination  
+  consistency: number; // Regular practice and habit formation
   willpower: number; // Mental fortitude
   influence: number; // Social impact
+  relationships: number; // Interpersonal connections
 }
 
 // Skill Types
@@ -70,6 +71,7 @@ export interface Quest {
   xpReward: number;
   statRewards: Partial<CharacterStats>;
   deadline?: Date;
+  endDate?: Date; // For daily tasks that repeat until this date
   proofRequired: ProofType[];
   repeat?: QuestRepeat;
   createdAt: Date;
@@ -77,6 +79,7 @@ export interface Quest {
   category?: string;
   progress?: number;
   tasks?: QuestTask[];
+  penaltyForMissing?: boolean; // Whether missing this quest causes XP deduction
 }
 
 export interface QuestTask {

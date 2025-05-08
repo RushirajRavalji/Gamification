@@ -35,12 +35,13 @@ export default function CharacterRadarChart({
   
   // Transform character stats into the format expected by RadarChart
   const chartData: StatPoint[] = [
-    { stat: 'Strength', value: stats.strength, fullMark: maxValue },
-    { stat: 'Intelligence', value: stats.intelligence, fullMark: maxValue },
-    { stat: 'Focus', value: stats.focus, fullMark: maxValue },
-    { stat: 'Dexterity', value: stats.dexterity, fullMark: maxValue },
-    { stat: 'Willpower', value: stats.willpower, fullMark: maxValue },
-    { stat: 'Influence', value: stats.influence, fullMark: maxValue },
+    { stat: 'Strength', value: stats.strength || 0, fullMark: maxValue },
+    { stat: 'Intelligence', value: stats.intelligence || 0, fullMark: maxValue },
+    { stat: 'Focus', value: stats.focus || 0, fullMark: maxValue },
+    { stat: 'Consistency', value: stats.consistency || 0, fullMark: maxValue },
+    { stat: 'Willpower', value: stats.willpower || 0, fullMark: maxValue },
+    { stat: 'Influence', value: stats.influence || 0, fullMark: maxValue },
+    { stat: 'Relationships', value: stats.relationships || 0, fullMark: maxValue },
   ];
   
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

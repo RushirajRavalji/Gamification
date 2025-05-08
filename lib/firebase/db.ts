@@ -61,6 +61,46 @@ export async function createInitialCharacter(name: string) {
   // If character exists, return it
   if (!characterDocs.empty) {
     const characterData = characterDocs.docs[0].data();
+    
+    // Check if the character has all the required stats
+    // If not, update with missing stats
+    const hasAllStats = 
+      'strength' in characterData.stats &&
+      'intelligence' in characterData.stats &&
+      'focus' in characterData.stats &&
+      'consistency' in characterData.stats &&
+      'willpower' in characterData.stats &&
+      'influence' in characterData.stats &&
+      'relationships' in characterData.stats;
+    
+    if (!hasAllStats) {
+      // Add any missing stats with default value
+      const updatedStats = { ...characterData.stats };
+      if (!('strength' in updatedStats)) updatedStats.strength = 5;
+      if (!('intelligence' in updatedStats)) updatedStats.intelligence = 5;
+      if (!('focus' in updatedStats)) updatedStats.focus = 5;
+      if (!('consistency' in updatedStats)) updatedStats.consistency = 5;
+      if (!('willpower' in updatedStats)) updatedStats.willpower = 5;
+      if (!('influence' in updatedStats)) updatedStats.influence = 5;
+      if (!('relationships' in updatedStats)) updatedStats.relationships = 5;
+      
+      // Update the character with all stats
+      const characterDocRef = doc(db, 'users', user.uid, 'character', characterDocs.docs[0].id);
+      await updateDoc(characterDocRef, {
+        'stats': updatedStats,
+        'updatedAt': serverTimestamp()
+      });
+      
+      // Return updated character data
+      return {
+        id: characterDocs.docs[0].id,
+        ...characterData,
+        stats: updatedStats,
+        createdAt: characterData.createdAt?.toDate(),
+        updatedAt: new Date()
+      } as Character;
+    }
+    
     return {
       id: characterDocs.docs[0].id,
       ...characterData,
@@ -73,9 +113,10 @@ export async function createInitialCharacter(name: string) {
     strength: 5,
     intelligence: 5,
     focus: 5,
-    dexterity: 5,
+    consistency: 5,
     willpower: 5,
-    influence: 5
+    influence: 5,
+    relationships: 5
   };
   
   const newCharacter: Omit<Character, 'id'> = {
@@ -337,11 +378,12 @@ export async function updateQuestStatus(questId: string, status: QuestStatus) {
     'updatedAt': serverTimestamp()
   });
   
+  // Get the quest data to check for penalties or rewards
+  const questDoc = await getDoc(questRef);
+  const questData = questDoc.data() as Quest;
+  
   // If completed, add XP to the character
   if (status === 'Completed') {
-    const questDoc = await getDoc(questRef);
-    const questData = questDoc.data() as Quest;
-    
     if (questData && questData.xpReward) {
       await addXpToCharacter(questData.xpReward);
       
@@ -349,6 +391,15 @@ export async function updateQuestStatus(questId: string, status: QuestStatus) {
       if (questData.statRewards) {
         await updateCharacterStats(questData.statRewards);
       }
+      
+      // Add to XP journal
+      await addToXpJournal({
+        title: `Completed: ${questData.title}`,
+        description: questData.description,
+        xpGained: questData.xpReward,
+        statsGained: questData.statRewards || {},
+        questId: questId
+      });
       
       // If it's a daily quest, check and update streak
       if (questData.type === 'Daily') {
@@ -372,6 +423,36 @@ export async function updateQuestStatus(questId: string, status: QuestStatus) {
           'updatedAt': serverTimestamp()
         });
       }
+    }
+  } 
+  // If marked as failed and it has a penalty, deduct XP
+  else if (status === 'Failed' && questData && questData.penaltyForMissing) {
+    if (questData.xpReward) {
+      // Get character to check current XP
+      const character = await getCharacter();
+      if (!character) return;
+      
+      // Deduct XP but don't go below 0
+      const penaltyAmount = -questData.xpReward;
+      const newXp = Math.max(0, character.xp + penaltyAmount);
+      const newTotalXpEarned = Math.max(0, character.totalXpEarned + penaltyAmount);
+      
+      // Update character with reduced XP
+      const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
+      await updateDoc(characterDocRef, {
+        'xp': newXp,
+        'totalXpEarned': newTotalXpEarned,
+        'updatedAt': serverTimestamp()
+      });
+      
+      // Add to XP journal (negative entry)
+      await addToXpJournal({
+        title: `Missed Daily Task: ${questData.title}`,
+        description: `XP penalty for missing a daily task`,
+        xpGained: penaltyAmount,
+        statsGained: {},
+        questId: questId
+      });
     }
   }
 }
@@ -497,4 +578,44 @@ export async function calculateAndUpdateTotalXP() {
   }
   
   return character.xp; // Return existing XP, even if it's 0
+}
+
+// Add this function to handle XP journal entries
+
+interface XpJournalEntryInput {
+  title: string;
+  description: string;
+  xpGained: number;
+  statsGained: Partial<CharacterStats>;
+  questId?: string;
+  proofUrl?: string[];
+}
+
+export async function addToXpJournal(entry: XpJournalEntryInput) {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+  
+  // Get the character
+  const character = await getCharacter();
+  
+  if (!character) {
+    throw new Error('Character not found');
+  }
+  
+  const journalRef = collection(db, 'users', user.uid, 'xpJournal');
+  
+  await addDoc(journalRef, {
+    userId: user.uid,
+    characterId: character.id,
+    questId: entry.questId || null,
+    title: entry.title,
+    description: entry.description,
+    xpGained: entry.xpGained,
+    statsGained: entry.statsGained,
+    proofUrl: entry.proofUrl || [],
+    timestamp: serverTimestamp(),
+  });
 } 

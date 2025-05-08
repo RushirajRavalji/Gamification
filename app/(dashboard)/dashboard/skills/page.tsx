@@ -295,9 +295,10 @@ export default function SkillTreePage() {
         strength: 5,
         intelligence: 5,
         focus: 5,
-        dexterity: 5,
+        consistency: 5,
         willpower: 5,
-        influence: 5
+        influence: 5,
+        relationships: 5
       };
       
       await updateStats(baseStats);

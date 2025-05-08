@@ -17,7 +17,7 @@ export default function Home() {
           epic RPG adventure. Level up in life as you defeat the Void of Complacency
           and become the legendary hero you were meant to be.
         </p>
-        
+
         <div className="flex flex-col sm:flex-row gap-4">
           <Button asChild size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
             <Link href="/register">Begin Your Journey</Link>
@@ -42,7 +42,7 @@ export default function Home() {
             <p className="text-gray-300">Overcome the Beast of Complacency through disciplined action and purposeful growth.</p>
           </div>
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
   );
 }

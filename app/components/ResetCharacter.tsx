@@ -55,13 +55,20 @@ export default function ResetCharacter() {
           strength: 5,
           intelligence: 5,
           focus: 5,
-          dexterity: 5,
+          consistency: 5,
           willpower: 5,
-          influence: 5
+          influence: 5,
+          relationships: 5
         },
         streakCount: 0,
         totalXpEarned: 0,
         updatedAt: new Date()
+      });
+      
+      // Force double-check both XP fields are reset
+      await updateDoc(characterDocRef, {
+        xp: 0,
+        totalXpEarned: 0,
       });
       
       // 2. Delete all quests
