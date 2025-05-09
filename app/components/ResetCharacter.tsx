@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/firebase/auth";
 import { useState } from "react";
-import { doc, collection, getDocs, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { doc, collection, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/firebase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";

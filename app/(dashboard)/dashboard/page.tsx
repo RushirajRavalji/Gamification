@@ -68,6 +68,43 @@ export default function Dashboard() {
     }
   }, [authLoading, characterLoading, questsLoading]);
 
+  // Check if daily tasks need to be evaluated and reset
+  const checkAndEvaluateDailyTasks = async () => {
+    try {
+      // Get last evaluation timestamp from localStorage
+      const lastEvaluation = localStorage.getItem('lastDailyEvaluation');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Check if we've already evaluated tasks today
+      if (lastEvaluation) {
+        const lastEvalDate = new Date(parseInt(lastEvaluation));
+        lastEvalDate.setHours(0, 0, 0, 0);
+        
+        // If we've already evaluated today, skip
+        if (lastEvalDate.getTime() === today.getTime()) {
+          return;
+        }
+      }
+      
+      // First evaluate any missed tasks from yesterday with penalties
+      await evaluateDailyTasks();
+      
+      // Then reset daily tasks for today
+      await resetDailyTasks();
+      
+      // Store current timestamp for next check
+      localStorage.setItem('lastDailyEvaluation', Date.now().toString());
+      
+      // Refresh quests after evaluation
+      await fetchQuests();
+      
+      console.log("Daily tasks evaluated and reset for today");
+    } catch (error) {
+      console.error("Error evaluating or resetting daily tasks:", error);
+    }
+  };
+
   // Handle initial data check - streak and XP calculation
   useEffect(() => {
     // Only run once after initial data is loaded and when we have a user
@@ -101,7 +138,7 @@ export default function Dashboard() {
       // Check if we need to evaluate yesterday's tasks
       checkAndEvaluateDailyTasks();
     }
-  }, [isLoading, user, character, fetchCharacter]);
+  }, [isLoading, user, character, fetchCharacter, fetchAchievements]);
 
   // Handle quest completion
   const handleQuestCompletion = async (questId: string) => {
@@ -144,43 +181,6 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error("Error completing quest:", error);
-    }
-  };
-
-  // Check if daily tasks need to be evaluated and reset
-  const checkAndEvaluateDailyTasks = async () => {
-    try {
-      // Get last evaluation timestamp from localStorage
-      const lastEvaluation = localStorage.getItem('lastDailyEvaluation');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Check if we've already evaluated tasks today
-      if (lastEvaluation) {
-        const lastEvalDate = new Date(parseInt(lastEvaluation));
-        lastEvalDate.setHours(0, 0, 0, 0);
-        
-        // If we've already evaluated today, skip
-        if (lastEvalDate.getTime() === today.getTime()) {
-          return;
-        }
-      }
-      
-      // First evaluate any missed tasks from yesterday with penalties
-      await evaluateDailyTasks();
-      
-      // Then reset daily tasks for today
-      await resetDailyTasks();
-      
-      // Store current timestamp for next check
-      localStorage.setItem('lastDailyEvaluation', Date.now().toString());
-      
-      // Refresh quests after evaluation
-      await fetchQuests();
-      
-      console.log("Daily tasks evaluated and reset for today");
-    } catch (error) {
-      console.error("Error evaluating or resetting daily tasks:", error);
     }
   };
 

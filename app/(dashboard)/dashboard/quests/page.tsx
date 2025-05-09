@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/firebase/auth";
 import { QuestType, QuestStatus } from "@/lib/types";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQuests } from "@/lib/hooks/useQuests";
 import { useCharacter } from "@/lib/hooks/useCharacter";
-import { getQuests, updateQuestStatus as updateQuest, checkAndUpdateStreak } from "@/lib/firebase/db";
+import { checkAndUpdateStreak } from "@/lib/firebase/db";
 // import { toast } from "react-hot-toast";
 
 export default function QuestsPage() {

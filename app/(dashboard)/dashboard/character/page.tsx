@@ -18,7 +18,8 @@ export default function CharacterPage() {
   const [selectedTab, setSelectedTab] = useState("overview");
   
   const handleAvatarChange = async (avatarId: string) => {
-    // Reload character data after avatar change
+    // Reload character data after avatar change to display the new avatar
+    console.log(`Avatar changed to ${avatarId}`);
     await fetchCharacter();
   };
   

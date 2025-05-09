@@ -5,7 +5,6 @@ import {
   doc, 
   getDoc, 
   getDocs, 
-  setDoc, 
   updateDoc, 
   addDoc, 
   query, 
@@ -17,7 +16,6 @@ import {
   Character, 
   CharacterStats, 
   Quest, 
-  QuestType, 
   QuestStatus
 } from '../types';
 
@@ -578,7 +576,7 @@ export async function updateQuestStatus(questId: string, status: QuestStatus) {
 }
 
 // Journal operations
-export async function addXpJournalEntry(entry: any) {
+export async function addXpJournalEntry(entry: Record<string, unknown>) {
   const user = auth.currentUser;
   
   if (!user) {
@@ -755,10 +753,6 @@ export async function evaluateDailyTasks() {
   // Set the date to end of day
   const endOfDay = new Date(today);
   endOfDay.setHours(23, 59, 59, 999);
-  
-  // Convert to Firestore timestamps
-  const todayTimestamp = Timestamp.fromDate(today);
-  const endOfDayTimestamp = Timestamp.fromDate(endOfDay);
   
   try {
     // Get all daily tasks that are not completed and should have been done today

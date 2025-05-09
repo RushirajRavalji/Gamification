@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/firebase/auth';
-import { getCharacter, updateCharacterStats, addXpToCharacter, createInitialCharacter } from '@/lib/firebase/db';
+import { getCharacter, updateCharacterStats, addXpToCharacter } from '@/lib/firebase/db';
 import { Character, CharacterStats } from '@/lib/types';
 
 export function useCharacter() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const [character, setCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

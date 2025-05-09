@@ -396,4 +396,58 @@ export const getTemporaryAvatarUrl = (name: string, style: string = 'avataaars')
   
   const apiPath = apiPaths[style] || apiPaths.avataaars;
   return `${apiPath}?seed=${seed}&backgroundColor=4c1d95&radius=50`;
-}; 
+};
+
+// Upload a base64 avatar image to Firebase Storage
+export async function uploadAvatarImage(
+  userId: string, 
+  base64Data: string, 
+  avatarId: string
+): Promise<string> {
+  try {
+    // Validate inputs
+    if (!userId || !base64Data || !avatarId) {
+      throw new Error('Missing required parameters for avatar upload');
+    }
+
+    // Format the storage path
+    const storageRef = ref(storage, `avatars/${userId}/${avatarId}`);
+    
+    // Remove data URL prefix if present
+    const base64Content = base64Data.startsWith('data:')
+      ? base64Data
+      : `data:image/png;base64,${base64Data}`;
+    
+    // Upload the image
+    await uploadString(storageRef, base64Content, 'data_url');
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(storageRef);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    throw error;
+  }
+}
+
+// Delete an avatar image from Firebase Storage
+export async function deleteAvatarImage(userId: string, avatarId: string): Promise<boolean> {
+  try {
+    // Validate inputs
+    if (!userId || !avatarId) {
+      throw new Error('Missing required parameters for avatar deletion');
+    }
+    
+    // Format the storage path
+    const storageRef = ref(storage, `avatars/${userId}/${avatarId}`);
+    
+    // Delete the file
+    await deleteObject(storageRef);
+    
+    return true;
+  } catch (error: unknown) {
+    console.error('Error deleting avatar:', error);
+    return false;
+  }
+} 
