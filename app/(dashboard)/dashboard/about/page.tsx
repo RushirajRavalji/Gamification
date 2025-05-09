@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/lib/firebase/auth";
 
 export default function AboutPage() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
@@ -43,12 +42,12 @@ export default function AboutPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <div className="bg-gray-700 p-4 rounded-lg">
-                  <h3 className="font-bold text-lg mb-2">Your Hero's Journey</h3>
+                  <h3 className="font-bold text-lg mb-2">Your Hero&apos;s Journey</h3>
                   <p className="text-gray-300">Starting as a Novice (Level 1), evolve through custom class paths as you complete quests and develop your real-world abilities.</p>
                 </div>
                 <div className="bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-bold text-lg mb-2">Real Growth, Real Rewards</h3>
-                  <p className="text-gray-300">Every achievement in the real world is reflected in your character's stats, XP, and inventory.</p>
+                  <p className="text-gray-300">Every achievement in the real world is reflected in your character&apos;s stats, XP, and inventory.</p>
                 </div>
                 <div className="bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-bold text-lg mb-2">Build Your Legend</h3>
@@ -120,7 +119,7 @@ export default function AboutPage() {
 
                 <div className="border border-gray-700 rounded-lg p-4">
                   <h3 className="font-bold text-xl mb-2">Character Profile</h3>
-                  <p className="text-gray-300 mb-3">View and manage your hero's stats, appearance, and background story.</p>
+                  <p className="text-gray-300 mb-3">View and manage your hero&apos;s stats, appearance, and background story.</p>
                   <ul className="list-disc pl-5 text-sm text-gray-400">
                     <li>Six core attributes that reflect your real-world skills</li>
                     <li>Character class selection</li>
@@ -243,7 +242,7 @@ export default function AboutPage() {
 
               <div>
                 <h3 className="font-bold text-xl mb-3">Leveling System</h3>
-                <p className="mb-3">As you accumulate XP, you'll level up your character:</p>
+                <p className="mb-3">As you accumulate XP, you&apos;ll level up your character:</p>
                 <ul className="list-disc pl-5 space-y-2">
                   <li>Each level requires progressively more XP</li>
                   <li>Leveling up increases your core stats</li>
@@ -348,7 +347,7 @@ export default function AboutPage() {
                 <p className="mb-3">Track your growth visually through various indicators:</p>
                 <ul className="list-disc pl-5 space-y-2">
                   <li><strong>Stats Dashboard</strong> - See your current level, XP, and streak at a glance</li>
-                  <li><strong>Character Profile</strong> - View detailed information about your character's development</li>
+                  <li><strong>Character Profile</strong> - View detailed information about your character&apos;s development</li>
                   <li><strong>XP Journal</strong> - Review a chronological record of your accomplishments</li>
                   <li><strong>Inventory Display</strong> - Browse your collection of earned items and achievements</li>
                 </ul>
@@ -400,7 +399,7 @@ export default function AboutPage() {
                     <p className="text-gray-300">
                       Your character class should align with your primary goals and focus areas. The Warrior class focuses on physical development, 
                       the Shadow class emphasizes focus and discipline, and the Sage class centers on intellectual growth. Choose the one that 
-                      best matches your current priorities, but don't worry - all classes can develop all stats.
+                      best matches your current priorities, but don&apos;t worry - all classes can develop all stats.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -409,7 +408,7 @@ export default function AboutPage() {
                   <AccordionContent>
                     <p className="text-gray-300">
                       Yes, your data privacy is a priority. Solo Legend uses Firebase authentication and secure database storage. 
-                      Your personal information and quest details are visible only to you. We don't share your data with third parties,
+                      Your personal information and quest details are visible only to you. We don&apos;t share your data with third parties,
                       and you maintain full control over your account information.
                     </p>
                   </AccordionContent>
@@ -419,7 +418,7 @@ export default function AboutPage() {
                   <AccordionContent>
                     <p className="text-gray-300">
                       You earn XP by completing quests, with more challenging quests providing greater rewards. As you accumulate XP, 
-                      you'll level up automatically. Each level requires progressively more XP, and reaching certain level milestones 
+                      you&apos;ll level up automatically. Each level requires progressively more XP, and reaching certain level milestones 
                       (like level 15 and 40) unlocks new character class options and features.
                     </p>
                   </AccordionContent>
@@ -430,7 +429,7 @@ export default function AboutPage() {
                     <p className="text-gray-300">
                       Solo Legend is designed to integrate all aspects of personal development into a single character journey. 
                       You can create quests for any area of life - fitness, learning, career, relationships, creative pursuits, etc. 
-                      Your character's balanced growth across all stats reflects a holistic approach to self-improvement.
+                      Your character&apos;s balanced growth across all stats reflects a holistic approach to self-improvement.
                     </p>
                   </AccordionContent>
                 </AccordionItem>

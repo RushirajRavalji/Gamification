@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState("");
   const router = useRouter();
-  const { user, loading: authLoading, initialized } = useAuth();
+  const { user, initialized } = useAuth();
 
   // Check for existing authentication when component mounts
   useEffect(() => {

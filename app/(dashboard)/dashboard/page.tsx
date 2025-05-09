@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -13,29 +12,52 @@ import { collection, getDocs, query, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/firebase";
 import { useCharacter } from "@/lib/hooks/useCharacter";
 import { useQuests } from "@/lib/hooks/useQuests";
-import { checkAndUpdateStreak, calculateAndUpdateTotalXP } from "@/lib/firebase/db";
+import { checkAndUpdateStreak, calculateAndUpdateTotalXP, evaluateDailyTasks, resetDailyTasks } from "@/lib/firebase/db";
 // Temporarily comment out until the package is properly installed
 // import { toast } from "react-hot-toast";
 import CharacterRadarChart from "@/app/components/CharacterRadarChart";
 import CharacterAvatar from "@/app/components/CharacterAvatar";
-import AnimatedCard from "@/app/components/AnimatedCard";
 import FloatingAchievement from "@/app/components/FloatingAchievement";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { character, isLoading: characterLoading, fetchCharacter } = useCharacter();
-  const { quests, isLoading: questsLoading, updateQuest, getQuestsByType } = useQuests();
+  const { quests, isLoading: questsLoading, updateQuest, getQuestsByType, fetchQuests } = useQuests();
   const [recentAchievements, setRecentAchievements] = useState<XpJournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [streakMessage, setStreakMessage] = useState<string>('');
   const [showAchievement, setShowAchievement] = useState<{id: string, title: string, xp: number} | null>(null);
-  const [calculatedXP, setCalculatedXP] = useState<number | null>(null);
   const hasRunInitialCheckRef = useRef(false);
 
   // Get daily and active quests
   const dailyQuests = getQuestsByType("Daily");
   const activeQuests = [...getQuestsByType("Dungeon"), ...getQuestsByType("BossFight")].filter(q => q.status === "InProgress");
+
+  // Function to fetch achievements
+  const fetchAchievements = async () => {
+    try {
+      // Fetch recent achievements
+      if (user) {
+        const journalRef = collection(db, 'users', user.uid, 'xpJournal');
+        const journalQuery = query(journalRef, orderBy('timestamp', 'desc'), limit(2));
+        const journalSnap = await getDocs(journalQuery);
+        
+        const achievements = journalSnap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            timestamp: data.timestamp?.toDate()
+          } as XpJournalEntry;
+        });
+        
+        setRecentAchievements(achievements);
+      }
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+    }
+  };
 
   // Track when all data is loaded
   useEffect(() => {
@@ -64,7 +86,6 @@ export default function Dashboard() {
       // Check and update total XP if character has 0 XP
       if (character && character.xp === 0) {
         calculateAndUpdateTotalXP().then(xp => {
-          setCalculatedXP(xp);
           // Refresh character data if XP was updated
           if (xp > 0) {
             fetchCharacter();
@@ -76,32 +97,11 @@ export default function Dashboard() {
       
       // Fetch achievements only once at the beginning
       fetchAchievements();
+      
+      // Check if we need to evaluate yesterday's tasks
+      checkAndEvaluateDailyTasks();
     }
   }, [isLoading, user, character, fetchCharacter]);
-
-  const fetchAchievements = async () => {
-    try {
-      // Fetch recent achievements
-      if (user) {
-        const journalRef = collection(db, 'users', user.uid, 'xpJournal');
-        const journalQuery = query(journalRef, orderBy('timestamp', 'desc'), limit(2));
-        const journalSnap = await getDocs(journalQuery);
-        
-        const achievements = journalSnap.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            timestamp: data.timestamp?.toDate()
-          } as XpJournalEntry;
-        });
-        
-        setRecentAchievements(achievements);
-      }
-    } catch (error) {
-      console.error("Error fetching achievements:", error);
-    }
-  };
 
   // Handle quest completion
   const handleQuestCompletion = async (questId: string) => {
@@ -133,6 +133,9 @@ export default function Dashboard() {
               setStreakMessage(streakResult.message);
             }
           }
+          
+          // Refresh character data to sync XP in the UI
+          await fetchCharacter();
         }
       } else {
         console.error("Failed to update quest status");
@@ -140,6 +143,43 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error("Error completing quest:", error);
+    }
+  };
+
+  // Check if daily tasks need to be evaluated and reset
+  const checkAndEvaluateDailyTasks = async () => {
+    try {
+      // Get last evaluation timestamp from localStorage
+      const lastEvaluation = localStorage.getItem('lastDailyEvaluation');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Check if we've already evaluated tasks today
+      if (lastEvaluation) {
+        const lastEvalDate = new Date(parseInt(lastEvaluation));
+        lastEvalDate.setHours(0, 0, 0, 0);
+        
+        // If we've already evaluated today, skip
+        if (lastEvalDate.getTime() === today.getTime()) {
+          return;
+        }
+      }
+      
+      // First evaluate any missed tasks from yesterday with penalties
+      await evaluateDailyTasks();
+      
+      // Then reset daily tasks for today
+      await resetDailyTasks();
+      
+      // Store current timestamp for next check
+      localStorage.setItem('lastDailyEvaluation', Date.now().toString());
+      
+      // Refresh quests after evaluation
+      await fetchQuests();
+      
+      console.log("Daily tasks evaluated and reset for today");
+    } catch (error) {
+      console.error("Error evaluating or resetting daily tasks:", error);
     }
   };
 
@@ -303,7 +343,14 @@ export default function Dashboard() {
               ) : (
                 <div className="max-h-64 overflow-y-auto pr-3 custom-scrollbar">
                   <div className="space-y-4">
-                    {dailyQuests.map((quest, index) => (
+                    {[...dailyQuests]
+                      .sort((a, b) => {
+                        // Sort by completion status - incomplete first, completed last
+                        if (a.status === "Completed" && b.status !== "Completed") return 1;
+                        if (a.status !== "Completed" && b.status === "Completed") return -1;
+                        return 0;
+                      })
+                      .map((quest, index) => (
                       <motion.div 
                         key={quest.id} 
                         className={`flex items-center justify-between p-5 rounded-lg bg-gray-700/60 backdrop-blur-sm border border-gray-600 transition-all hover:shadow-md hover:shadow-purple-700/10 ${quest.status === "Completed" ? 'quest-completed' : ''}`}

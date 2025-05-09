@@ -12,18 +12,16 @@ import { useAuth } from "@/lib/firebase/auth";
 import { QuestType, QuestStatus } from "@/lib/types";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuests } from "@/lib/hooks/useQuests";
+import { useCharacter } from "@/lib/hooks/useCharacter";
 // import { toast } from "react-hot-toast";
 
 export default function QuestsPage() {
   const { user, loading: authLoading } = useAuth();
   const { quests, isLoading: questsLoading, updateQuest, updateDungeonTask, getQuestsByType } = useQuests();
+  const { fetchCharacter } = useCharacter();
   const [searchTerm, setSearchTerm] = useState("");
-  const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Get search query parameter if available
-  const questId = searchParams.get('id');
-
   // Handle quest status changes
   const handleQuestStatusChange = async (questId: string, newStatus: QuestStatus) => {
     try {
@@ -38,6 +36,11 @@ export default function QuestsPage() {
         console.log(newStatus === "Completed" ? 
           "Quest completed! XP awarded!" : 
           "Quest status updated");
+          
+        // Refresh character data to sync XP in the UI when a quest is completed
+        if (newStatus === "Completed") {
+          await fetchCharacter();
+        }
       } else {
         // toast.error("Failed to update quest status");
         console.error("Failed to update quest status");
@@ -58,6 +61,18 @@ export default function QuestsPage() {
       if (success) {
         // toast.success("Task updated");
         console.log("Task updated");
+        
+        // Find the quest to check if it was completed
+        const dungeon = quests.find(q => q.id === dungeonId);
+        if (dungeon && dungeon.type === 'Dungeon' && dungeon.tasks) {
+          // Check if all tasks are completed
+          const allTasksCompleted = dungeon.tasks.every(task => task.completed);
+          
+          // If all tasks are completed, refresh character data
+          if (allTasksCompleted) {
+            await fetchCharacter();
+          }
+        }
       } else {
         // toast.error("Failed to update task");
         console.error("Failed to update task");
@@ -147,7 +162,14 @@ export default function QuestsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {dailyQuests.map((quest) => (
+              {[...dailyQuests]
+                .sort((a, b) => {
+                  // Sort by completion status - incomplete first, completed last
+                  if (a.status === "Completed" && b.status !== "Completed") return 1;
+                  if (a.status !== "Completed" && b.status === "Completed") return -1;
+                  return 0;
+                })
+                .map((quest) => (
                 <div key={quest.id} className="bg-gray-800/80 backdrop-blur-sm border border-purple-900/20 rounded-xl overflow-hidden">
                   <div className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-0">

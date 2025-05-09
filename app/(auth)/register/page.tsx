@@ -19,8 +19,9 @@ export default function RegisterPage() {
   });
   const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState("");
+  const [isSuccessful, setIsSuccessful] = useState(false);
   const router = useRouter();
-  const { user, loading: authLoading, initialized } = useAuth();
+  const { user, initialized } = useAuth();
 
   // Check for existing authentication when component mounts
   useEffect(() => {

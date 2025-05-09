@@ -618,4 +618,142 @@ export async function addToXpJournal(entry: XpJournalEntryInput) {
     proofUrl: entry.proofUrl || [],
     timestamp: serverTimestamp(),
   });
+}
+
+// Function to evaluate daily tasks at the end of the day
+export async function evaluateDailyTasks() {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+  
+  // Get today's date (without time)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Set the date to end of day
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  // Convert to Firestore timestamps
+  const todayTimestamp = Timestamp.fromDate(today);
+  const endOfDayTimestamp = Timestamp.fromDate(endOfDay);
+  
+  try {
+    // Get all daily tasks that are not completed and should have been done today
+    const questsRef = collection(db, 'users', user.uid, 'quests');
+    const dailyQuestsQuery = query(
+      questsRef, 
+      where('type', '==', 'Daily'),
+      where('status', '!=', 'Completed'),
+      where('penaltyForMissing', '==', true)
+    );
+    
+    const dailyQuestsSnapshot = await getDocs(dailyQuestsQuery);
+    
+    // Evaluate each incomplete daily task
+    const tasks = dailyQuestsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id,
+        ...data, 
+        deadline: data.deadline?.toDate(),
+        endDate: data.endDate?.toDate(),
+        createdAt: data.createdAt?.toDate(),
+        updatedAt: data.updatedAt?.toDate()
+      } as Quest;
+    });
+    
+    for (const task of tasks) {
+      // Check if task is still valid (end date hasn't passed)
+      if (task.endDate) {
+        const endDate = new Date(task.endDate);
+        if (endDate < today) {
+          // Task has expired, no need to mark as failed
+          continue;
+        }
+      }
+      
+      // Mark task as failed
+      await updateQuestStatus(task.id, 'Failed');
+    }
+    
+    return { 
+      tasksEvaluated: tasks.length,
+      message: `Evaluated ${tasks.length} daily tasks`
+    };
+  } catch (error) {
+    console.error('Error evaluating daily tasks:', error);
+    throw error;
+  }
+}
+
+// Function to reset daily tasks for the next day
+export async function resetDailyTasks() {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+  
+  // Get today's date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  try {
+    // Get all daily tasks
+    const questsRef = collection(db, 'users', user.uid, 'quests');
+    const dailyQuestsQuery = query(
+      questsRef, 
+      where('type', '==', 'Daily'),
+      where('repeat', '==', 'Daily')
+    );
+    
+    const dailyQuestsSnapshot = await getDocs(dailyQuestsQuery);
+    
+    // Reset eligible tasks
+    const resettableTasks = dailyQuestsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id,
+        ...data, 
+        deadline: data.deadline?.toDate(),
+        endDate: data.endDate?.toDate(),
+        createdAt: data.createdAt?.toDate(),
+        updatedAt: data.updatedAt?.toDate()
+      } as Quest;
+    });
+    
+    let resetCount = 0;
+    
+    for (const task of resettableTasks) {
+      // Check if task is still within its date range
+      if (task.endDate) {
+        const endDate = new Date(task.endDate);
+        if (endDate < today) {
+          // Task has expired, don't reset
+          continue;
+        }
+      }
+      
+      // Reset task status to InProgress if it was completed or failed
+      if (task.status === 'Completed' || task.status === 'Failed') {
+        const taskRef = doc(db, 'users', user.uid, 'quests', task.id);
+        await updateDoc(taskRef, {
+          'status': 'InProgress',
+          'updatedAt': serverTimestamp()
+        });
+        resetCount++;
+      }
+    }
+    
+    return { 
+      tasksReset: resetCount,
+      message: `Reset ${resetCount} daily tasks for the new day`
+    };
+  } catch (error) {
+    console.error('Error resetting daily tasks:', error);
+    throw error;
+  }
 } 
