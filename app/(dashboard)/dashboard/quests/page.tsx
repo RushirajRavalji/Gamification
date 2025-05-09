@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { QuestType, QuestStatus } from "@/lib/types";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuests } from "@/lib/hooks/useQuests";
 import { useCharacter } from "@/lib/hooks/useCharacter";
+import { getQuests, updateQuestStatus as updateQuest, checkAndUpdateStreak } from "@/lib/firebase/db";
 // import { toast } from "react-hot-toast";
 
 export default function QuestsPage() {
@@ -37,9 +38,16 @@ export default function QuestsPage() {
           "Quest completed! XP awarded!" : 
           "Quest status updated");
           
-        // Refresh character data to sync XP in the UI when a quest is completed
+        // Refresh character data to sync XP and stats in the UI when a quest is completed
         if (newStatus === "Completed") {
+          console.log("Refreshing character data after quest completion");
           await fetchCharacter();
+          
+          // Check and update streak for daily quests
+          const quest = quests.find(q => q.id === questId);
+          if (quest?.type === 'Daily') {
+            await checkAndUpdateStreak();
+          }
         }
       } else {
         // toast.error("Failed to update quest status");

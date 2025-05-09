@@ -163,10 +163,37 @@ export async function updateCharacterStats(newStats: Partial<CharacterStats>) {
     throw new Error('Character not found');
   }
   
+  // Skip empty stat updates to prevent overwriting existing stats
+  if (!newStats || Object.keys(newStats).length === 0) {
+    console.log("Skipping character stats update - empty stats object");
+    return;
+  }
+  
+  console.log("Updating character stats:", newStats);
+  console.log("Current character stats:", character.stats);
+  
+  // Create a merged stats object, carefully preserving all existing stats
+  const mergedStats: CharacterStats = { ...character.stats };
+  
+  // Only update specific stats that are provided in newStats
+  Object.entries(newStats).forEach(([statName, statValue]) => {
+    if (statValue !== undefined && statValue !== null) {
+      // Get the current stat value
+      const currentValue = mergedStats[statName as keyof CharacterStats] || 0;
+      
+      // Add the new value to the current value
+      mergedStats[statName as keyof CharacterStats] = currentValue + statValue;
+      
+      console.log(`Stat ${statName} updated: ${currentValue} + ${statValue} = ${mergedStats[statName as keyof CharacterStats]}`);
+    }
+  });
+  
+  console.log("Merged stats to save:", mergedStats);
+  
   const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
   
   await updateDoc(characterDocRef, {
-    'stats': { ...character.stats, ...newStats },
+    'stats': mergedStats,
     'updatedAt': serverTimestamp()
   });
 }
@@ -252,7 +279,76 @@ export async function checkAndUpdateStreak() {
   
   const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
   const today = new Date();
-  const lastActive = character.lastActive || character.createdAt;
+  
+  // Debug what we received from Firestore
+  console.log("Raw lastActive from Firestore:", character.lastActive);
+  console.log("Raw lastActive type:", character.lastActive ? typeof character.lastActive : "undefined");
+  if (character.lastActive && typeof character.lastActive === 'object') {
+    console.log("lastActive has properties:", Object.keys(character.lastActive));
+    if ('toDate' in character.lastActive && typeof character.lastActive.toDate === 'function') {
+      console.log("lastActive is a Firestore Timestamp");
+    }
+  }
+  
+  // Safely get the last active date, falling back to creation date or today
+  let lastActive;
+  
+  try {
+    // Check if lastActive is a Firestore Timestamp
+    if (character.lastActive && typeof character.lastActive === 'object' && 
+        'toDate' in character.lastActive && typeof character.lastActive.toDate === 'function') {
+      // Use toDate() method for Firestore Timestamp
+      lastActive = character.lastActive.toDate();
+      console.log("Converted Firestore Timestamp to Date:", lastActive);
+    } 
+    // Check if lastActive is already a Date
+    else if (character.lastActive instanceof Date) {
+      lastActive = character.lastActive;
+      console.log("lastActive is already a Date:", lastActive);
+    }
+    // Check if lastActive is a valid date string or number
+    else if (character.lastActive) {
+      lastActive = new Date(character.lastActive);
+      // Validate the date is reasonable
+      if (isNaN(lastActive.getTime())) {
+        throw new Error("Invalid time value");
+      }
+      console.log("Converted string/number to Date:", lastActive);
+    }
+    // Try createdAt as fallback
+    else if (character.createdAt) {
+      if (typeof character.createdAt === 'object' && 
+          'toDate' in character.createdAt && 
+          typeof character.createdAt.toDate === 'function') {
+        lastActive = character.createdAt.toDate();
+      } else if (character.createdAt instanceof Date) {
+        lastActive = character.createdAt;
+      } else {
+        lastActive = new Date(character.createdAt);
+        // Validate the date is reasonable
+        if (isNaN(lastActive.getTime())) {
+          throw new Error("Invalid createdAt time value");
+        }
+      }
+      console.log("Using createdAt as fallback:", lastActive);
+    } 
+    // Last resort - use today's date
+    else {
+      lastActive = today;
+      console.log("No valid date found, using today as fallback");
+    }
+  } catch (error) {
+    console.error("Error converting dates:", error);
+    // If date conversion fails, default to today
+    lastActive = today;
+  }
+  
+  // Ensure the date is valid before proceeding
+  if (!lastActive || isNaN(lastActive.getTime())) {
+    console.error("Invalid lastActive date detected, defaulting to today");
+    console.error("lastActive value was:", character.lastActive);
+    lastActive = today;
+  }
   
   // Calculate days since last activity
   const lastActiveDate = new Date(lastActive);
@@ -260,53 +356,112 @@ export async function checkAndUpdateStreak() {
   const todayDate = new Date(today);
   todayDate.setHours(0, 0, 0, 0);
   
+  // Safe calculation of the time difference
   const diffTime = Math.abs(todayDate.getTime() - lastActiveDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  
+  console.log("Streak check - Current streak:", character.streakCount);
+  console.log("Streak check - Normalized lastActiveDate:", lastActiveDate);
+  console.log("Streak check - Normalized todayDate:", todayDate);
+  console.log("Streak check - Days difference:", diffDays);
   
   // Check for any daily quests completed today
-  const questsRef = collection(db, 'users', user.uid, 'quests');
-  const questsQuery = query(questsRef, where('type', '==', 'Daily'), where('status', '==', 'Completed'));
-  const questsSnapshot = await getDocs(questsQuery);
-  
-  // Update streak based on days since last active and whether daily quests were completed
-  let newStreakCount = character.streakCount;
-  let streakMessage = '';
-  
-  if (diffDays === 0) {
-    // Same day, no change to streak
+  try {
+    const questsRef = collection(db, 'users', user.uid, 'quests');
+    const questsQuery = query(questsRef, where('type', '==', 'Daily'), where('status', '==', 'Completed'));
+    const questsSnapshot = await getDocs(questsQuery);
+    
+    console.log("Streak check - Completed daily quests count:", questsSnapshot.size);
+    
+    // Update streak based on days since last active and whether daily quests were completed
+    let newStreakCount = character.streakCount;
+    let streakMessage = '';
+    
+    if (diffDays === 0) {
+      // Same day, check if there are completed quests to maintain streak
+      if (questsSnapshot.size > 0 && character.streakCount === 0) {
+        // First completion today and no streak yet, start one
+        newStreakCount = 1;
+        streakMessage = '🔥 Streak started! Complete daily quests tomorrow to continue!';
+        
+        await updateDoc(characterDocRef, {
+          'streakCount': newStreakCount,
+          'lastActive': serverTimestamp(),
+          'updatedAt': serverTimestamp()
+        });
+        
+        console.log("Streak started with count:", newStreakCount);
+        return { streakCount: newStreakCount, message: streakMessage };
+      }
+      // Already have a streak and completed quests today, no change necessary
+      if (questsSnapshot.size > 0 && character.streakCount > 0) {
+        streakMessage = `🔥 ${character.streakCount} day streak - keep it up tomorrow!`;
+        console.log("Streak maintained:", character.streakCount);
+        return { streakCount: character.streakCount, message: streakMessage };
+      }
+      // No quests completed yet today
+      if (questsSnapshot.size === 0) {
+        if (character.streakCount > 0) {
+          streakMessage = `🔥 ${character.streakCount} day streak - complete a daily quest to maintain it!`;
+        } else {
+          streakMessage = 'Complete a daily quest to start your streak!';
+        }
+        console.log("No quests completed yet today");
+        return { streakCount: character.streakCount, message: streakMessage };
+      }
+    } else if (diffDays === 1) {
+      // Yesterday - check if we completed tasks today to continue streak
+      if (questsSnapshot.size > 0) {
+        // Completed daily quests today, increase streak
+        newStreakCount = character.streakCount + 1;
+        streakMessage = `🔥 ${newStreakCount} day streak - well done!`;
+        
+        await updateDoc(characterDocRef, {
+          'streakCount': newStreakCount,
+          'lastActive': serverTimestamp(),
+          'updatedAt': serverTimestamp()
+        });
+        
+        console.log("Streak increased to:", newStreakCount);
+        return { streakCount: newStreakCount, message: streakMessage };
+      } else {
+        // Haven't completed quests yet today, but still have a chance
+        if (character.streakCount > 0) {
+          streakMessage = `🔥 ${character.streakCount} day streak - complete a daily quest to maintain it!`;
+        } else {
+          streakMessage = 'Complete a daily quest to start your streak!';
+        }
+        console.log("No quests completed yet today, streak:", character.streakCount);
+        return { streakCount: character.streakCount, message: streakMessage };
+      }
+    } else {
+      // Multiple days since last active - check if completed quests today to restart streak
+      if (questsSnapshot.size > 0) {
+        // Missed days, but completed quests today - reset streak to 1
+        newStreakCount = 1;
+        streakMessage = '🔥 Streak restarted! Complete daily quests tomorrow to continue!';
+        
+        await updateDoc(characterDocRef, {
+          'streakCount': newStreakCount,
+          'lastActive': serverTimestamp(),
+          'updatedAt': serverTimestamp()
+        });
+        
+        console.log("New streak started:", newStreakCount);
+        return { streakCount: newStreakCount, message: streakMessage };
+      } else {
+        // No streak, no completed quests
+        streakMessage = 'Complete a daily quest to start your streak!';
+        console.log("No streak and no completed quests");
+        return { streakCount: 0, message: streakMessage };
+      }
+    }
+  } catch (error) {
+    console.error("Error in streak checking:", error);
     return { 
       streakCount: character.streakCount, 
-      message: 'Complete a daily quest to maintain your streak!' 
+      message: 'Error checking streak status. Please try again.' 
     };
-  } else if (diffDays === 1) {
-    // Consecutive day, check if completed at least one daily quest
-    if (!questsSnapshot.empty) {
-      // At least one daily quest was completed today, increment streak
-      newStreakCount += 1;
-      streakMessage = `🔥 ${newStreakCount} day streak! Keep it going!`;
-      
-      await updateDoc(characterDocRef, {
-        'streakCount': newStreakCount,
-        'lastActive': serverTimestamp(),
-        'updatedAt': serverTimestamp()
-      });
-    } else {
-      // No daily quests completed yet today
-      streakMessage = 'Complete a daily quest to continue your streak!';
-    }
-    
-    return { streakCount: newStreakCount, message: streakMessage };
-  } else {
-    // More than one day missed, reset streak
-    streakMessage = 'Streak reset! Complete a daily quest to start a new streak.';
-    
-    await updateDoc(characterDocRef, {
-      'streakCount': 0,
-      'lastActive': serverTimestamp(),
-      'updatedAt': serverTimestamp()
-    });
-    
-    return { streakCount: 0, message: streakMessage };
   }
 }
 
@@ -388,73 +543,38 @@ export async function updateQuestStatus(questId: string, status: QuestStatus) {
       await addXpToCharacter(questData.xpReward);
       
       // If there are stat rewards, update character stats
-      if (questData.statRewards) {
-        await updateCharacterStats(questData.statRewards);
-      }
-      
-      // Add to XP journal
-      await addToXpJournal({
-        title: `Completed: ${questData.title}`,
-        description: questData.description,
-        xpGained: questData.xpReward,
-        statsGained: questData.statRewards || {},
-        questId: questId
-      });
-      
-      // If it's a daily quest, check and update streak
-      if (questData.type === 'Daily') {
-        // Get the character
+      if (questData.statRewards && Object.keys(questData.statRewards).length > 0) {
+        // Get current character stats
         const character = await getCharacter();
         if (!character) return;
         
-        // Get today's date (without time)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Create updated stats by adding the rewards to current stats
+        const updatedStats: Partial<CharacterStats> = {};
         
-        // Get last active date (without time)
-        const lastActive = character.lastActive || character.createdAt;
-        const lastActiveDate = new Date(lastActive);
-        lastActiveDate.setHours(0, 0, 0, 0);
-        
-        // Only update lastActive, streak is managed by checkAndUpdateStreak
-        const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
-        await updateDoc(characterDocRef, {
-          'lastActive': serverTimestamp(),
-          'updatedAt': serverTimestamp()
+        Object.entries(questData.statRewards).forEach(([statName, value]) => {
+          if (typeof value === 'number' && value > 0) {
+            // Only include stats that have positive values
+            updatedStats[statName as keyof CharacterStats] = value;
+          }
         });
+        
+        // Log rewards being applied
+        console.log("Applying stat rewards:", updatedStats);
+        
+        // Update character stats by adding (not replacing) the rewards
+        if (Object.keys(updatedStats).length > 0) {
+          await updateCharacterStats(updatedStats);
+        }
       }
     }
-  } 
-  // If marked as failed and it has a penalty, deduct XP
-  else if (status === 'Failed' && questData && questData.penaltyForMissing) {
-    if (questData.xpReward) {
-      // Get character to check current XP
-      const character = await getCharacter();
-      if (!character) return;
-      
-      // Deduct XP but don't go below 0
-      const penaltyAmount = -questData.xpReward;
-      const newXp = Math.max(0, character.xp + penaltyAmount);
-      const newTotalXpEarned = Math.max(0, character.totalXpEarned + penaltyAmount);
-      
-      // Update character with reduced XP
-      const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
-      await updateDoc(characterDocRef, {
-        'xp': newXp,
-        'totalXpEarned': newTotalXpEarned,
-        'updatedAt': serverTimestamp()
-      });
-      
-      // Add to XP journal (negative entry)
-      await addToXpJournal({
-        title: `Missed Daily Task: ${questData.title}`,
-        description: `XP penalty for missing a daily task`,
-        xpGained: penaltyAmount,
-        statsGained: {},
-        questId: questId
-      });
+    
+    // If it's a daily quest, also update the streak
+    if (questData.type === 'Daily') {
+      await checkAndUpdateStreak();
     }
   }
+  
+  return true;
 }
 
 // Journal operations

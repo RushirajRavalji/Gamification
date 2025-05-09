@@ -134,8 +134,9 @@ export default function Dashboard() {
             }
           }
           
-          // Refresh character data to sync XP in the UI
+          // Refresh character data to sync XP and stats in the UI
           await fetchCharacter();
+          console.log("Character data refreshed after quest completion");
         }
       } else {
         console.error("Failed to update quest status");

@@ -41,6 +41,25 @@ export default function CharacterPage() {
   // Calculate total stats (base + equipment)
   const totalStats = { ...character.stats };
   
+  // Add stat bonuses from equipped items
+  if (character.inventory && character.inventory.length > 0) {
+    const equippedItems = character.inventory.filter(item => item.equipped);
+    
+    equippedItems.forEach(item => {
+      if (item.statBoost) {
+        Object.entries(item.statBoost).forEach(([stat, value]) => {
+          if (typeof value === 'number' && value > 0) {
+            // Add the bonus to the base stat
+            const statKey = stat as keyof typeof totalStats;
+            if (totalStats[statKey] !== undefined) {
+              totalStats[statKey] += value;
+            }
+          }
+        });
+      }
+    });
+  }
+  
   // Mock achievements and equipment until we implement them properly
   const achievements = [
     { id: "a1", name: "First Steps", description: "Created your character" },

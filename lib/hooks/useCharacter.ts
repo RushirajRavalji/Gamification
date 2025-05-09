@@ -63,12 +63,20 @@ export function useCharacter() {
       setCharacter(prev => {
         if (!prev) return null;
         
+        // Create a new stats object that adds the stats instead of replacing them
+        const updatedStats = { ...prev.stats };
+        
+        // Add each new stat value to the current value
+        Object.entries(newStats).forEach(([statName, value]) => {
+          if (value !== undefined && value !== null) {
+            const currentValue = updatedStats[statName as keyof CharacterStats] || 0;
+            updatedStats[statName as keyof CharacterStats] = currentValue + value;
+          }
+        });
+        
         return {
           ...prev,
-          stats: {
-            ...prev.stats,
-            ...newStats
-          }
+          stats: updatedStats
         };
       });
       
