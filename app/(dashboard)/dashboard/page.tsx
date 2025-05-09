@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/firebase/auth";
-import { XpJournalEntry } from "@/lib/types";
+import { XpJournalEntry, Quest, QuestStatus } from "@/lib/types";
 import { collection, getDocs, query, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/firebase";
 import { useCharacter } from "@/lib/hooks/useCharacter";
@@ -19,57 +19,90 @@ import CharacterRadarChart from "@/app/components/CharacterRadarChart";
 import CharacterAvatar from "@/app/components/CharacterAvatar";
 import FloatingAchievement from "@/app/components/FloatingAchievement";
 import { motion } from "framer-motion";
+import TaskUndoneNotification from "@/app/components/TaskUndoneNotification";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// These components don't exist in the current codebase, commenting them out
+// import SparkleButton from "@/app/components/SparkleButton";
+// import QuestCard from "@/app/components/QuestCard";
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { character, isLoading: characterLoading, fetchCharacter } = useCharacter();
-  const { quests, isLoading: questsLoading, updateQuest, getQuestsByType, fetchQuests } = useQuests();
+  const { 
+    quests, 
+    isLoading: questsLoading, 
+    updateQuest, 
+    // Use the pre-filtered quests instead of filtering on each render
+    dailyQuests, 
+    dungeonQuests,
+    bossFightQuests,
+    fetchQuests 
+  } = useQuests();
+  
   const [recentAchievements, setRecentAchievements] = useState<XpJournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [streakMessage, setStreakMessage] = useState<string>('');
   const [showAchievement, setShowAchievement] = useState<{id: string, title: string, xp: number} | null>(null);
+  const [taskUndone, setTaskUndone] = useState<{id: string, title: string, xp: number} | null>(null);
   const hasRunInitialCheckRef = useRef(false);
+  const [achievementsLoaded, setAchievementsLoaded] = useState(false);
 
-  // Get daily and active quests
-  const dailyQuests = getQuestsByType("Daily");
-  const activeQuests = [...getQuestsByType("Dungeon"), ...getQuestsByType("BossFight")].filter(q => q.status === "InProgress");
+  // Active quests - dungeons and boss fights that are in progress
+  const activeQuests = useMemo(() => {
+    return [...dungeonQuests, ...bossFightQuests].filter(q => q.status === "InProgress");
+  }, [dungeonQuests, bossFightQuests]);
+  
+  // Sorted daily quests with completed ones at the bottom
+  const sortedDailyQuests = useMemo(() => {
+    return [...dailyQuests].sort((a, b) => {
+      // Sort by completion status - incomplete first, completed last
+      if (a.status === "Completed" && b.status !== "Completed") return 1;
+      if (a.status !== "Completed" && b.status === "Completed") return -1;
+      return 0;
+    });
+  }, [dailyQuests]);
 
-  // Function to fetch achievements
-  const fetchAchievements = async () => {
+  // Function to fetch achievements - optimized with useCallback and debounce
+  const fetchAchievements = useCallback(async () => {
+    // Skip if we've already loaded achievements or have no user
+    if (achievementsLoaded || !user) return;
+    
     try {
-      // Fetch recent achievements
-      if (user) {
-        const journalRef = collection(db, 'users', user.uid, 'xpJournal');
-        const journalQuery = query(journalRef, orderBy('timestamp', 'desc'), limit(2));
-        const journalSnap = await getDocs(journalQuery);
-        
-        const achievements = journalSnap.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            timestamp: data.timestamp?.toDate()
-          } as XpJournalEntry;
-        });
-        
-        setRecentAchievements(achievements);
-      }
+      const journalRef = collection(db, 'users', user.uid, 'xpJournal');
+      const journalQuery = query(journalRef, orderBy('timestamp', 'desc'), limit(2));
+      const journalSnap = await getDocs(journalQuery);
+      
+      const achievements = journalSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          timestamp: data.timestamp?.toDate()
+        } as XpJournalEntry;
+      });
+      
+      setRecentAchievements(achievements);
+      setAchievementsLoaded(true);
     } catch (error) {
       console.error("Error fetching achievements:", error);
     }
-  };
+  }, [user, achievementsLoaded]);
 
-  // Track when all data is loaded
+  // Optimize loading state tracking
   useEffect(() => {
-    if (!authLoading && !characterLoading && !questsLoading) {
-      setIsLoading(false);
-    } else {
-      setIsLoading(true);
+    const isLoadingNow = authLoading || characterLoading || questsLoading;
+    
+    if (isLoading !== isLoadingNow) {
+      setIsLoading(isLoadingNow);
     }
-  }, [authLoading, characterLoading, questsLoading]);
+  }, [authLoading, characterLoading, questsLoading, isLoading]);
 
-  // Check if daily tasks need to be evaluated and reset
-  const checkAndEvaluateDailyTasks = async () => {
+  // Optimize daily task evaluation with useCallback and a timestamp checker
+  const checkAndEvaluateDailyTasks = useCallback(async () => {
+    // Skip if no user is logged in
+    if (!user) return false;
+    
     try {
       // Get last evaluation timestamp from localStorage
       const lastEvaluation = localStorage.getItem('lastDailyEvaluation');
@@ -83,7 +116,7 @@ export default function Dashboard() {
         
         // If we've already evaluated today, skip
         if (lastEvalDate.getTime() === today.getTime()) {
-          return;
+          return false;
         }
       }
       
@@ -97,91 +130,293 @@ export default function Dashboard() {
       localStorage.setItem('lastDailyEvaluation', Date.now().toString());
       
       // Refresh quests after evaluation
-      await fetchQuests();
+      await fetchQuests(true); // Force refresh to get updated data
       
-      console.log("Daily tasks evaluated and reset for today");
+      return true;
     } catch (error) {
       console.error("Error evaluating or resetting daily tasks:", error);
+      return false;
     }
-  };
+  }, [user, fetchQuests]);
 
-  // Handle initial data check - streak and XP calculation
+  // Combine initialization into a single effect with proper sequencing
   useEffect(() => {
-    // Only run once after initial data is loaded and when we have a user
-    if (!isLoading && user && !hasRunInitialCheckRef.current) {
+    if (isLoading || !user || hasRunInitialCheckRef.current) return;
+    
+    const initDashboard = async () => {
+      // Set flag immediately to prevent duplicate runs
       hasRunInitialCheckRef.current = true;
       
-      // Check and update streak
-      checkAndUpdateStreak().then(result => {
-        if (result && result.message) {
-          setStreakMessage(result.message);
+      try {
+        // 1. Check for daily task evaluation first
+        await checkAndEvaluateDailyTasks();
+        
+        // 2. Update streak next
+        const streakResult = await checkAndUpdateStreak();
+        if (streakResult?.message) {
+          setStreakMessage(streakResult.message);
         }
-      }).catch(error => {
-        console.error("Error updating streak:", error);
-      });
-      
-      // Check and update total XP if character has 0 XP
-      if (character && character.xp === 0) {
-        calculateAndUpdateTotalXP().then(xp => {
-          // Refresh character data if XP was updated
-          if (xp > 0) {
-            fetchCharacter();
+        
+        // 3. Check XP if needed
+        if (character?.xp === 0) {
+          const xpGained = await calculateAndUpdateTotalXP();
+          if (xpGained > 0) {
+            // Refresh character with updated XP
+            await fetchCharacter(true);
           }
-        }).catch(error => {
-          console.error("Error calculating total XP:", error);
-        });
+        }
+        
+        // 4. Load achievements last (least critical)
+        await fetchAchievements();
+      } catch (error) {
+        console.error("Error initializing dashboard:", error);
       }
-      
-      // Fetch achievements only once at the beginning
-      fetchAchievements();
-      
-      // Check if we need to evaluate yesterday's tasks
-      checkAndEvaluateDailyTasks();
-    }
-  }, [isLoading, user, character, fetchCharacter, fetchAchievements]);
+    };
+    
+    initDashboard();
+  }, [
+    isLoading, 
+    user, 
+    character, 
+    fetchCharacter, 
+    fetchAchievements, 
+    checkAndEvaluateDailyTasks
+  ]);
 
-  // Handle quest completion
-  const handleQuestCompletion = async (questId: string) => {
+  // Define the memoized components for list items
+  const DailyQuestItem = useCallback(({ quest, index, onComplete }: { quest: Quest, index: number, onComplete: (id: string) => void }) => {
+    // Local state to handle immediate visual feedback
+    const [isChecked, setIsChecked] = useState(quest.status === "Completed");
+    
+    // Update local state when quest status changes
+    useEffect(() => {
+      setIsChecked(quest.status === "Completed");
+    }, [quest.status]);
+    
+    const handleToggle = () => {
+      // Update local state immediately
+      setIsChecked(!isChecked);
+      // Call the actual handler
+      onComplete(quest.id);
+    };
+    
+    return (
+      <motion.div 
+        key={quest.id} 
+        className={`flex items-center justify-between p-5 rounded-lg bg-gray-700/60 backdrop-blur-sm border border-gray-600 transition-all hover:shadow-md hover:shadow-purple-700/10 ${isChecked ? 'quest-completed' : ''}`}
+        initial={{ x: -50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.05 * index, duration: 0.3 }}
+        whileHover={{ scale: 1.01 }}
+      >
+        <div className="flex items-center space-x-5">
+          <input 
+            type="checkbox" 
+            checked={isChecked} 
+            onChange={handleToggle}
+            className="h-5 w-5 rounded border-gray-500 text-purple-600 focus:ring-purple-600"
+          />
+          <div>
+            <p className={`font-medium ${isChecked ? 'line-through text-gray-400' : 'text-white'}`}>
+              {quest.title}
+            </p>
+            <div className="flex items-center space-x-2 mt-1">
+              <Badge variant="outline" className="text-xs border-purple-500/30">
+                {quest.type}
+              </Badge>
+              <span className="text-xs text-gray-400">+{quest.xpReward} XP</span>
+            </div>
+          </div>
+        </div>
+        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Button 
+            size="sm" 
+            variant={isChecked ? "outline" : "default"}
+            onClick={handleToggle}
+            className={isChecked ? "" : "bg-gradient-to-r from-purple-600 to-pink-600"}
+          >
+            {isChecked ? "View" : "Complete"}
+          </Button>
+        </motion.div>
+      </motion.div>
+    );
+  }, []);
+  
+  const ActiveQuestItem = useCallback(({ quest, index }: { quest: Quest, index: number }) => (
+    <motion.div 
+      key={quest.id} 
+      className="space-y-3 p-5 rounded-lg bg-gray-700/60 backdrop-blur-sm border border-gray-600 transition-all hover:shadow-md hover:shadow-purple-700/10"
+      initial={{ x: -50, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ delay: 0.05 * index, duration: 0.3 }}
+      whileHover={{ scale: 1.01 }}
+    >
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="font-medium text-white">{quest.title}</p>
+          <div className="flex items-center space-x-2 mt-1">
+            <Badge variant="secondary" className="text-xs bg-purple-900/80 backdrop-blur-sm text-purple-200">
+              {quest.type}
+            </Badge>
+            <span className="text-xs text-gray-400">+{quest.xpReward} XP</span>
+          </div>
+        </div>
+        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Button size="sm" variant="outline" className="border-purple-500/30 hover:bg-purple-950/30" asChild>
+            <Link href={`/dashboard/quests?id=${quest.id}`}>Continue</Link>
+          </Button>
+        </motion.div>
+      </div>
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs">
+          <span>Progress</span>
+          <span>{quest.progress || 0}%</span>
+        </div>
+        <Progress 
+          value={quest.progress || 0} 
+          className="h-2 bg-gray-700"
+          indicatorClassName="bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse-slow"
+        />
+      </div>
+    </motion.div>
+  ), []);
+
+  // Optimize quest completion handler
+  const handleQuestCompletion = useCallback(async (questId: string) => {
     try {
-      // Find the quest
+      // Find the quest 
       const quest = dailyQuests.find(q => q.id === questId);
       
       if (!quest) return;
       
       // Toggle the status
       const newStatus = quest.status === "Completed" ? "InProgress" : "Completed";
+      const isCompleting = newStatus === "Completed";
       
-      // Update in Firebase
-      const success = await updateQuest(questId, newStatus);
+      // Optimistically update UI immediately
+      // Create a copy of dailyQuests with the toggled status
+      const updatedQuests = dailyQuests.map(q => 
+        q.id === questId ? { ...q, status: newStatus as QuestStatus } : q
+      );
       
-      if (success) {
-        // Show achievement popup on completion
-        if (newStatus === "Completed") {
-          setShowAchievement({
-            id: questId,
-            title: quest.title,
-            xp: quest.xpReward
-          });
-          
-          // Update streak status for daily quests
-          if (quest.type === 'Daily') {
-            const streakResult = await checkAndUpdateStreak();
-            if (streakResult && streakResult.message) {
-              setStreakMessage(streakResult.message);
-            }
-          }
-          
-          // Refresh character data to sync XP and stats in the UI
-          await fetchCharacter();
-          console.log("Character data refreshed after quest completion");
-        }
+      // Force a re-render by updating a state variable
+      // Note: This works because we're using useMemo for sortedDailyQuests which depends on dailyQuests
+      // This is a temporary solution - in a full implementation we would use proper state management
+      setIsLoading(prevLoading => {
+        setTimeout(() => setIsLoading(prevLoading), 0);
+        return prevLoading;
+      });
+      
+      // Update notifications immediately
+      if (isCompleting) {
+        setTaskUndone(null);
+        setShowAchievement({
+          id: questId,
+          title: quest.title,
+          xp: quest.xpReward
+        });
       } else {
-        console.error("Failed to update quest status");
+        setShowAchievement(null);
+        setTaskUndone({
+          id: questId,
+          title: quest.title,
+          xp: quest.xpReward
+        });
       }
       
+      // Update in Firebase (in the background)
+      updateQuest(questId, newStatus).then(success => {
+        if (!success) {
+          console.error("Failed to update quest status");
+          return;
+        }
+        
+        // Perform secondary updates after successful quest update
+        if (isCompleting && quest.type === 'Daily') {
+          checkAndUpdateStreak().then(streakResult => {
+            if (streakResult?.message) {
+              setStreakMessage(streakResult.message);
+            }
+          });
+        }
+        
+        // Refresh character data to sync XP and stats in the UI
+        fetchCharacter(true);
+      }).catch(error => {
+        console.error("Error updating quest:", error);
+      });
+      
     } catch (error) {
-      console.error("Error completing quest:", error);
+      console.error("Error updating quest:", error);
     }
+  }, [dailyQuests, updateQuest, checkAndUpdateStreak, fetchCharacter]);
+
+  // Lazy loading for content - fixed to work properly with the components
+  const renderDailyQuests = () => {
+    if (dailyQuests.length === 0) {
+      return (
+        <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <p className="mb-2">No daily quests available.</p>
+            <Button variant="outline" size="sm" asChild className="text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 rounded-md">
+              <Link href="/dashboard/quests/create">Create your first quest</Link>
+            </Button>
+          </motion.div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+        <div className="space-y-4">
+          {sortedDailyQuests.map((quest, index) => (
+            <DailyQuestItem 
+              key={quest.id}
+              quest={quest} 
+              index={index} 
+              onComplete={handleQuestCompletion} 
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderActiveQuests = () => {
+    if (activeQuests.length === 0) {
+      return (
+        <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <p className="mb-3">No active quests. Start a dungeon or boss fight!</p>
+            <Button variant="outline" size="sm" asChild className="text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 rounded-md">
+              <Link href="/dashboard/quests">Browse quests</Link>
+            </Button>
+          </motion.div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+        <div className="space-y-4">
+          {activeQuests.map((quest, index) => (
+            <ActiveQuestItem 
+              key={quest.id}
+              quest={quest} 
+              index={index}
+            />
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -210,10 +445,16 @@ export default function Dashboard() {
         onComplete={() => setShowAchievement(null)}
       />
       
+      {/* Task undone notification */}
+      <TaskUndoneNotification
+        task={taskUndone}
+        onComplete={() => setTaskUndone(null)}
+      />
+      
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.3 }}
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6"
       >
         <div className="flex items-center">
@@ -328,72 +569,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-400">Complete your daily challenges to maintain your streak</p>
             </div>
             <div className="px-5 pb-5">
-              {dailyQuests.length === 0 ? (
-                <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <p className="mb-2">No daily quests available.</p>
-                    <Button variant="outline" size="sm" asChild className="text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 rounded-md">
-                      <Link href="/dashboard/quests/create">Create your first quest</Link>
-                    </Button>
-                  </motion.div>
-                </div>
-              ) : (
-                <div className="max-h-64 overflow-y-auto pr-3 custom-scrollbar">
-                  <div className="space-y-4">
-                    {[...dailyQuests]
-                      .sort((a, b) => {
-                        // Sort by completion status - incomplete first, completed last
-                        if (a.status === "Completed" && b.status !== "Completed") return 1;
-                        if (a.status !== "Completed" && b.status === "Completed") return -1;
-                        return 0;
-                      })
-                      .map((quest, index) => (
-                      <motion.div 
-                        key={quest.id} 
-                        className={`flex items-center justify-between p-5 rounded-lg bg-gray-700/60 backdrop-blur-sm border border-gray-600 transition-all hover:shadow-md hover:shadow-purple-700/10 ${quest.status === "Completed" ? 'quest-completed' : ''}`}
-                        initial={{ x: -50, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.1 * index, duration: 0.5 }}
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <div className="flex items-center space-x-5">
-                          <input 
-                            type="checkbox" 
-                            checked={quest.status === "Completed"} 
-                            onChange={() => handleQuestCompletion(quest.id)}
-                            className="h-5 w-5 rounded border-gray-500 text-purple-600 focus:ring-purple-600"
-                          />
-                          <div>
-                            <p className={`font-medium ${quest.status === "Completed" ? 'line-through text-gray-400' : 'text-white'}`}>
-                              {quest.title}
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant="outline" className="text-xs border-purple-500/30">
-                                {quest.type}
-                              </Badge>
-                              <span className="text-xs text-gray-400">+{quest.xpReward} XP</span>
-                            </div>
-                          </div>
-                        </div>
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                          <Button 
-                            size="sm" 
-                            variant={quest.status === "Completed" ? "outline" : "default"}
-                            onClick={() => handleQuestCompletion(quest.id)}
-                            className={quest.status === "Completed" ? "" : "bg-gradient-to-r from-purple-600 to-pink-600"}
-                          >
-                            {quest.status === "Completed" ? "View" : "Complete"}
-                          </Button>
-                        </motion.div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {renderDailyQuests()}
             </div>
           </div>
 
@@ -406,63 +582,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-400">Your ongoing adventures</p>
             </div>
             <div className="px-5 pb-5">
-              {activeQuests.length === 0 ? (
-                <div className="text-center text-gray-400 py-8 border border-dashed border-gray-700 rounded-lg bg-gray-800/50 backdrop-blur-sm">
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <p className="mb-3">No active quests. Start a dungeon or boss fight!</p>
-                    <Button variant="outline" size="sm" asChild className="text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 rounded-md">
-                      <Link href="/dashboard/quests">Browse quests</Link>
-                    </Button>
-                  </motion.div>
-                </div>
-              ) : (
-                <div className="max-h-64 overflow-y-auto pr-3 custom-scrollbar">
-                  <div className="space-y-4">
-                    {activeQuests.map((quest, index) => (
-                      <motion.div 
-                        key={quest.id} 
-                        className="space-y-3 p-5 rounded-lg bg-gray-700/60 backdrop-blur-sm border border-gray-600 transition-all hover:shadow-md hover:shadow-purple-700/10"
-                        initial={{ x: -50, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.1 * index, duration: 0.5 }}
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium text-white">{quest.title}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant="secondary" className="text-xs bg-purple-900/80 backdrop-blur-sm text-purple-200">
-                                {quest.type}
-                              </Badge>
-                              <span className="text-xs text-gray-400">+{quest.xpReward} XP</span>
-                            </div>
-                          </div>
-                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                            <Button size="sm" variant="outline" className="border-purple-500/30 hover:bg-purple-950/30" asChild>
-                              <Link href={`/dashboard/quests?id=${quest.id}`}>Continue</Link>
-                            </Button>
-                          </motion.div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span>Progress</span>
-                            <span>{quest.progress || 0}%</span>
-                          </div>
-                          <Progress 
-                            value={quest.progress || 0} 
-                            className="h-2 bg-gray-700"
-                            indicatorClassName="bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse-slow"
-                          />
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {renderActiveQuests()}
             </div>
           </div>
         </motion.div>

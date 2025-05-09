@@ -10,7 +10,11 @@ import {
   query, 
   where, 
   Timestamp, 
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch,
+  limit,
+  DocumentReference,
+  orderBy
 } from 'firebase/firestore';
 import { 
   Character, 
@@ -27,22 +31,27 @@ export async function getCharacter() {
     throw new Error('No authenticated user');
   }
   
-  const characterRef = collection(db, 'users', user.uid, 'character');
-  const characterDocs = await getDocs(characterRef);
-  
-  if (characterDocs.empty) {
-    // Create a default character if none exists
-    console.log('No character found, creating initial character');
-    return createInitialCharacter('Hero');
+  try {
+    const characterRef = collection(db, 'users', user.uid, 'character');
+    const characterDocs = await getDocs(characterRef);
+    
+    if (characterDocs.empty) {
+      // Create a default character if none exists
+      console.log('No character found, creating initial character');
+      return createInitialCharacter('Hero');
+    }
+    
+    const characterData = characterDocs.docs[0].data();
+    return {
+      id: characterDocs.docs[0].id,
+      ...characterData,
+      createdAt: characterData.createdAt?.toDate(),
+      updatedAt: characterData.updatedAt?.toDate()
+    } as Character;
+  } catch (error) {
+    console.error('Error fetching character:', error);
+    throw error;
   }
-  
-  const characterData = characterDocs.docs[0].data();
-  return {
-    id: characterDocs.docs[0].id,
-    ...characterData,
-    createdAt: characterData.createdAt?.toDate(),
-    updatedAt: characterData.updatedAt?.toDate()
-  } as Character;
 }
 
 export async function createInitialCharacter(name: string) {
@@ -464,26 +473,47 @@ export async function checkAndUpdateStreak() {
 }
 
 // Quest operations
-export async function getQuests() {
+export async function getQuests(type?: string, status?: QuestStatus) {
   const user = auth.currentUser;
   
   if (!user) {
     throw new Error('No authenticated user');
   }
   
-  const questsRef = collection(db, 'users', user.uid, 'quests');
-  const questsDocs = await getDocs(questsRef);
-  
-  return questsDocs.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      deadline: data.deadline?.toDate(),
-      createdAt: data.createdAt?.toDate(),
-      updatedAt: data.updatedAt?.toDate()
-    } as Quest;
-  });
+  try {
+    const questsRef = collection(db, 'users', user.uid, 'quests');
+    
+    // Build query based on parameters
+    let questsQuery: any = questsRef;
+    
+    if (type && status) {
+      questsQuery = query(
+        questsRef, 
+        where('type', '==', type),
+        where('status', '==', status)
+      );
+    } else if (type) {
+      questsQuery = query(questsRef, where('type', '==', type));
+    } else if (status) {
+      questsQuery = query(questsRef, where('status', '==', status));
+    }
+    
+    const questsDocs = await getDocs(questsQuery);
+    
+    return questsDocs.docs.map(doc => {
+      const data = doc.data() as Record<string, any>;
+      return {
+        id: doc.id,
+        ...data,
+        deadline: data.deadline?.toDate?.(),
+        createdAt: data.createdAt?.toDate?.(),
+        updatedAt: data.updatedAt?.toDate?.()
+      } as Quest;
+    });
+  } catch (error) {
+    console.error('Error fetching quests:', error);
+    throw error;
+  }
 }
 
 export async function createQuest(quest: Omit<Quest, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -526,49 +556,115 @@ export async function updateQuestStatus(questId: string, status: QuestStatus) {
   
   const questRef = doc(db, 'users', user.uid, 'quests', questId);
   
+  // Get the quest data to check for penalties or rewards
+  const questDoc = await getDoc(questRef);
+  const questData = questDoc.data() as Quest;
+  
+  // Get the previous status
+  const previousStatus = questData.status;
+  
+  // Update the quest status
   await updateDoc(questRef, {
     'status': status,
     'updatedAt': serverTimestamp()
   });
   
-  // Get the quest data to check for penalties or rewards
-  const questDoc = await getDoc(questRef);
-  const questData = questDoc.data() as Quest;
+  // Track if we need to update the character
+  let needsCharacterUpdate = false;
   
-  // If completed, add XP to the character
-  if (status === 'Completed') {
-    if (questData && questData.xpReward) {
-      await addXpToCharacter(questData.xpReward);
-      
-      // If there are stat rewards, update character stats
-      if (questData.statRewards && Object.keys(questData.statRewards).length > 0) {
-        // Get current character stats
-        const character = await getCharacter();
-        if (!character) return;
+  // Handle XP and stat rewards based on status changes
+  if (previousStatus !== status) {
+    // If completing the quest (changing from not completed to completed)
+    if (status === 'Completed' && previousStatus !== 'Completed') {
+      if (questData && questData.xpReward) {
+        // Add XP to the character
+        await addXpToCharacter(questData.xpReward);
+        needsCharacterUpdate = true;
         
-        // Create updated stats by adding the rewards to current stats
-        const updatedStats: Partial<CharacterStats> = {};
-        
-        Object.entries(questData.statRewards).forEach(([statName, value]) => {
-          if (typeof value === 'number' && value > 0) {
-            // Only include stats that have positive values
-            updatedStats[statName as keyof CharacterStats] = value;
-          }
+        // Add entry to XP journal for task completion
+        await addToXpJournal({
+          title: `Task Completed: ${questData.title}`,
+          description: `Earned ${questData.xpReward} XP for completing task`,
+          xpGained: questData.xpReward,
+          statsGained: questData.statRewards || {}
         });
         
-        // Log rewards being applied
-        console.log("Applying stat rewards:", updatedStats);
+        // If there are stat rewards, update character stats
+        if (questData.statRewards && Object.keys(questData.statRewards).length > 0) {
+          // Get current character stats
+          const character = await getCharacter();
+          if (!character) return;
+          
+          // Create updated stats by adding the rewards to current stats
+          const updatedStats: Partial<CharacterStats> = {};
+          
+          Object.entries(questData.statRewards).forEach(([statName, value]) => {
+            if (typeof value === 'number' && value > 0) {
+              // Only include stats that have positive values
+              updatedStats[statName as keyof CharacterStats] = value;
+            }
+          });
+          
+          // Log rewards being applied
+          console.log("Applying stat rewards:", updatedStats);
+          
+          // Update character stats by adding the rewards
+          if (Object.keys(updatedStats).length > 0) {
+            await updateCharacterStats(updatedStats);
+          }
+        }
         
-        // Update character stats by adding (not replacing) the rewards
-        if (Object.keys(updatedStats).length > 0) {
-          await updateCharacterStats(updatedStats);
+        // If it's a daily quest, update the streak
+        if (questData.type === 'Daily') {
+          await checkAndUpdateStreak();
         }
       }
     }
-    
-    // If it's a daily quest, also update the streak
-    if (questData.type === 'Daily') {
-      await checkAndUpdateStreak();
+    // If un-completing the quest (changing from completed to not completed)
+    else if (previousStatus === 'Completed' && status !== 'Completed') {
+      if (questData && questData.xpReward) {
+        // Remove XP from character
+        await removeXpFromCharacter(questData.xpReward);
+        needsCharacterUpdate = true;
+        
+        // Add entry to XP journal with negative XP
+        await addToXpJournal({
+          title: `Task Undone: ${questData.title}`,
+          description: `Removed ${questData.xpReward} XP for uncompleting task`,
+          xpGained: -questData.xpReward,
+          statsGained: {}
+        });
+        
+        // If there are stat rewards, remove them from character stats
+        if (questData.statRewards && Object.keys(questData.statRewards).length > 0) {
+          // Get current character stats
+          const character = await getCharacter();
+          if (!character) return;
+          
+          // Create updated stats by subtracting the rewards from current stats
+          const updatedStats: Partial<CharacterStats> = {};
+          
+          Object.entries(questData.statRewards).forEach(([statName, value]) => {
+            if (typeof value === 'number' && value > 0) {
+              // Make the value negative to subtract
+              updatedStats[statName as keyof CharacterStats] = -value;
+            }
+          });
+          
+          // Log rewards being removed
+          console.log("Removing stat rewards:", updatedStats);
+          
+          // Update character stats by removing the rewards
+          if (Object.keys(updatedStats).length > 0) {
+            await updateCharacterStats(updatedStats);
+          }
+        }
+        
+        // If it's a daily quest, update the streak (may need to decrease)
+        if (questData.type === 'Daily') {
+          await checkAndUpdateStreak();
+        }
+      }
     }
   }
   
@@ -750,10 +846,6 @@ export async function evaluateDailyTasks() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  // Set the date to end of day
-  const endOfDay = new Date(today);
-  endOfDay.setHours(23, 59, 59, 999);
-  
   try {
     // Get all daily tasks that are not completed and should have been done today
     const questsRef = collection(db, 'users', user.uid, 'quests');
@@ -765,6 +857,13 @@ export async function evaluateDailyTasks() {
     );
     
     const dailyQuestsSnapshot = await getDocs(dailyQuestsQuery);
+    
+    if (dailyQuestsSnapshot.empty) {
+      return { 
+        tasksEvaluated: 0,
+        message: 'No daily tasks to evaluate'
+      };
+    }
     
     // Evaluate each incomplete daily task
     const tasks = dailyQuestsSnapshot.docs.map(doc => {
@@ -779,6 +878,10 @@ export async function evaluateDailyTasks() {
       } as Quest;
     });
     
+    // Use batch write for better performance
+    const batch = writeBatch(db);
+    const failedTasks: Quest[] = [];
+    
     for (const task of tasks) {
       // Check if task is still valid (end date hasn't passed)
       if (task.endDate) {
@@ -789,13 +892,41 @@ export async function evaluateDailyTasks() {
         }
       }
       
-      // Mark task as failed
-      await updateQuestStatus(task.id, 'Failed');
+      // Add task to failed batch
+      const taskRef = doc(db, 'users', user.uid, 'quests', task.id);
+      batch.update(taskRef, {
+        status: 'Failed',
+        updatedAt: serverTimestamp()
+      });
+      failedTasks.push(task);
+    }
+    
+    if (failedTasks.length > 0) {
+      // Commit batch update
+      await batch.commit();
+      
+      // Add penalty for missed daily task
+      if (failedTasks.length > 0) {
+        // Apply XP penalty
+        const totalPenalty = failedTasks.reduce((sum, task) => sum + (task.xpReward || 0), 0) * -0.5;
+        
+        if (totalPenalty < 0) {
+          await addXpToCharacter(totalPenalty);
+          
+          // Add to XP journal
+          await addToXpJournal({
+            title: `Missed Daily Tasks`,
+            description: `Penalty for missing ${failedTasks.length} daily tasks`,
+            xpGained: totalPenalty,
+            statsGained: {}
+          });
+        }
+      }
     }
     
     return { 
-      tasksEvaluated: tasks.length,
-      message: `Evaluated ${tasks.length} daily tasks`
+      tasksEvaluated: failedTasks.length,
+      message: `Evaluated ${failedTasks.length} daily tasks`
     };
   } catch (error) {
     console.error('Error evaluating daily tasks:', error);
@@ -826,6 +957,13 @@ export async function resetDailyTasks() {
     
     const dailyQuestsSnapshot = await getDocs(dailyQuestsQuery);
     
+    if (dailyQuestsSnapshot.empty) {
+      return { 
+        tasksReset: 0,
+        message: 'No daily tasks to reset'
+      };
+    }
+    
     // Reset eligible tasks
     const resettableTasks = dailyQuestsSnapshot.docs.map(doc => {
       const data = doc.data();
@@ -839,6 +977,8 @@ export async function resetDailyTasks() {
       } as Quest;
     });
     
+    // Use batch write for better performance
+    const batch = writeBatch(db);
     let resetCount = 0;
     
     for (const task of resettableTasks) {
@@ -854,12 +994,17 @@ export async function resetDailyTasks() {
       // Reset task status to InProgress if it was completed or failed
       if (task.status === 'Completed' || task.status === 'Failed') {
         const taskRef = doc(db, 'users', user.uid, 'quests', task.id);
-        await updateDoc(taskRef, {
+        batch.update(taskRef, {
           'status': 'InProgress',
           'updatedAt': serverTimestamp()
         });
         resetCount++;
       }
+    }
+    
+    if (resetCount > 0) {
+      // Commit batch update
+      await batch.commit();
     }
     
     return { 
@@ -868,6 +1013,108 @@ export async function resetDailyTasks() {
     };
   } catch (error) {
     console.error('Error resetting daily tasks:', error);
+    throw error;
+  }
+}
+
+export async function removeXpFromCharacter(xpAmount: number) {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+  
+  const character = await getCharacter();
+  
+  if (!character) {
+    throw new Error('Character not found');
+  }
+  
+  const characterDocRef = doc(db, 'users', user.uid, 'character', character.id);
+  
+  // Calculate the new XP values
+  const newXp = Math.max(0, character.xp - xpAmount); // Don't go below 0 XP
+  
+  // Calculate total XP earned (may need to decrease)
+  const totalXpEarned = Math.max(0, (character.totalXpEarned || 0) - xpAmount);
+  
+  // Get target level based on new total XP
+  let targetLevel = 1;
+  let xpRequired = 100; // XP required for level 2
+  let accumulatedXp = 0;
+  let newXpToNextLevel = xpRequired;
+  
+  // Recalculate level based on total XP earned
+  while (accumulatedXp + xpRequired <= totalXpEarned) {
+    accumulatedXp += xpRequired;
+    targetLevel++;
+    xpRequired = Math.floor(xpRequired * 1.1); // Each level requires 10% more XP
+  }
+  
+  // Calculate XP towards next level
+  const xpTowardsNextLevel = totalXpEarned - accumulatedXp;
+  
+  // If level changed, update level-related fields
+  if (targetLevel !== character.level) {
+    // Update character with new values
+    await updateDoc(characterDocRef, {
+      'xp': xpTowardsNextLevel,
+      'level': targetLevel,
+      'xpToNextLevel': xpRequired,
+      'totalXpEarned': totalXpEarned,
+      'updatedAt': serverTimestamp()
+    });
+    
+    return { 
+      newXp: xpTowardsNextLevel, 
+      newLevel: targetLevel, 
+      newXpToNextLevel: xpRequired, 
+      totalXpEarned 
+    };
+  } else {
+    // Just update XP values if level hasn't changed
+    await updateDoc(characterDocRef, {
+      'xp': newXp,
+      'totalXpEarned': totalXpEarned,
+      'updatedAt': serverTimestamp()
+    });
+    
+    return { 
+      newXp, 
+      newLevel: character.level, 
+      newXpToNextLevel: character.xpToNextLevel, 
+      totalXpEarned 
+    };
+  }
+}
+
+// Add batch update function for multiple quests at once
+export async function batchUpdateQuests(
+  updates: Array<{ id: string; status: QuestStatus }>
+) {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+  
+  if (updates.length === 0) return true;
+  
+  try {
+    const batch = writeBatch(db);
+    
+    updates.forEach(({ id, status }) => {
+      const questRef = doc(db, 'users', user.uid, 'quests', id);
+      batch.update(questRef, {
+        status,
+        updatedAt: serverTimestamp()
+      });
+    });
+    
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error('Error batch updating quests:', error);
     throw error;
   }
 } 

@@ -18,7 +18,7 @@ import { checkAndUpdateStreak } from "@/lib/firebase/db";
 
 export default function QuestsPage() {
   const { user, loading: authLoading } = useAuth();
-  const { quests, isLoading: questsLoading, updateQuest, updateDungeonTask, getQuestsByType } = useQuests();
+  const { quests, isLoading: questsLoading, updateQuest, updateDungeonTask, getQuestsByType, fetchQuests } = useQuests();
   const { fetchCharacter } = useCharacter();
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
@@ -26,38 +26,45 @@ export default function QuestsPage() {
   // Handle quest status changes
   const handleQuestStatusChange = async (questId: string, newStatus: QuestStatus) => {
     try {
+      // Get the current quest
+      const currentQuest = quests.find(q => q.id === questId);
+      if (!currentQuest) return;
+      
+      // Determine if we're completing or uncompleting
+      const isCompleting = newStatus === "Completed";
+      const wasCompleted = currentQuest.status === "Completed";
+      
       // Update in Firebase
       const success = await updateQuest(questId, newStatus);
       
       if (success) {
-        // Temporarily comment out
-        // toast.success(newStatus === "Completed" ? 
-        //   "Quest completed! XP awarded!" : 
-        //   "Quest status updated");
-        console.log(newStatus === "Completed" ? 
-          "Quest completed! XP awarded!" : 
-          "Quest status updated");
-          
-        // Refresh character data to sync XP and stats in the UI when a quest is completed
-        if (newStatus === "Completed") {
-          console.log("Refreshing character data after quest completion");
+        // Message based on operation
+        if (isCompleting) {
+          console.log("Quest completed! XP awarded!");
+          // You could add a toast here
+        } else if (wasCompleted) {
+          console.log("Quest marked as incomplete. XP and rewards have been removed.");
+          // You could add a toast here
+        } else {
+          console.log("Quest status updated");
+        }
+        
+        // Refresh character data to sync XP and stats in the UI when a quest status changes
+        if (isCompleting || wasCompleted) {
+          console.log("Refreshing character data after quest status change");
           await fetchCharacter();
           
-          // Check and update streak for daily quests
-          const quest = quests.find(q => q.id === questId);
-          if (quest?.type === 'Daily') {
+          // Update streak for daily quests
+          if (currentQuest.type === 'Daily') {
             await checkAndUpdateStreak();
           }
         }
-      } else {
-        // toast.error("Failed to update quest status");
-        console.error("Failed to update quest status");
+        
+        // Reload quests list to update the UI
+        await fetchQuests();
       }
-      
     } catch (error) {
       console.error("Error updating quest status:", error);
-      // toast.error("An error occurred while updating");
-      console.error("An error occurred while updating");
     }
   };
 
